@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>rasterizer</title>
+<link rel="stylesheet" type="text/css" href="Styles/Rasterizer.css" />
+<script src="JavaScript/tsrasterizer.js"></script>
+</head>
+<body>
+
+<div id="framebuffer" class="pixelSize32"></div>
+
+<a href="TypeScript/Box.ts">Box.ts</a>
+<a href="TypeScript/Edge.ts">Edge.ts</a>
+<a href="TypeScript/Matrix4.ts">Matrix4.ts</a>
+<a href="TypeScript/Rasterizer.js">Rasterizer.ts</a>
+<a href="TypeScript/Span.ts">Span.ts</a>
+<a href="TypeScript/Vector4.ts">Vector4.ts</a>
+
+<p>
+	pixel size:
+	<select onchange="pixelSizeChanged(this)">
+		<option value="pixelSize16">16x16</option>
+		<option value="pixelSize32" selected="selected">32x32</option>
+		<option value="pixelSize64">64x64</option>
+		<option value="pixelSize128">128x128</option>
+	</select>
+</p>
+
+<p>
+	<input id="clearFramebufferCheckbox" type="checkbox" onchange="clearFramebufferChanged(this)" checked="checked" />
+	<label for="clearFramebufferCheckbox">clear framebuffer</label>
+</p>
+
+<script>
+var rast = new Rasterizer(document.getElementById("framebuffer"));
+var clearFramebuffer = true;
+
+var boxes = new Array();
+boxes.push(new Box(new Vector4(-1, -1, -1), 1, new Vector4(255, 0, 0)));
+boxes.push(new Box(new Vector4(-1, -1, 1), 1, new Vector4(0, 255, 0)));
+boxes.push(new Box(new Vector4(-1, 1, -1), 1, new Vector4(0, 0, 255)));
+boxes.push(new Box(new Vector4(-1, 1, 1), 1, new Vector4(255, 255, 255)));
+boxes.push(new Box(new Vector4(1, -1, -1), 1, new Vector4(64, 64, 64)));
+boxes.push(new Box(new Vector4(1, -1, 1), 1, new Vector4(255, 255, 0)));
+boxes.push(new Box(new Vector4(1, 1, -1), 1, new Vector4(0, 255, 255)));
+boxes.push(new Box(new Vector4(1, 1, 1), 1, new Vector4(255, 0, 255)));
+
+var r = 0.0;
+function render()
+{
+	if(clearFramebuffer)
+		rast.clear();
+
+	r += (Math.PI / 180.0) * 2;
+	var mr = Matrix4.rollRotation(r);
+	var my = Matrix4.yawRotation(-r * 1.5);
+	var mt = Matrix4.translation(new Vector4(0, 0, -6));
+	rast.setModelviewMatrix(mt.multiply(my.multiply(mr)));
+
+	for(var i = 0; i < boxes.length; ++i)
+		boxes[i].render(rast);
+}
+
+setInterval(render, 50);
+
+function pixelSizeChanged(pixelSize)
+{
+	document.getElementById("framebuffer").className = pixelSize.options[pixelSize.selectedIndex].value;
+	rast = new Rasterizer(document.getElementById("framebuffer"));
+}
+
+function clearFramebufferChanged(clearFramebufferCheckbox)
+{
+	clearFramebuffer = clearFramebufferCheckbox.checked;
+}
+</script>
+
+</body>
+</html>
