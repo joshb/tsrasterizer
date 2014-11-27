@@ -34,48 +34,48 @@ class Box
         var position = this.position;
         var size = this.size / 2;
         var color1 = this.color;
-		var color2 = color1.scale(0.75);
+        var color2 = color1.scale(0.75);
 
-		// front
-		var v1 = new Vector4(-size, size, size);
-		var v2 = new Vector4(-size, -size, size);
-		var v3 = new Vector4(size, size, size);
-		var v4 = new Vector4(size, -size, size);
-		rast.drawQuad3D(color1, v1.add(position), color2, v2.add(position), color1, v3.add(position), color2, v4.add(position));
+        // front
+        var v1 = new Vector4(-size, size, size);
+        var v2 = new Vector4(-size, -size, size);
+        var v3 = new Vector4(size, size, size);
+        var v4 = new Vector4(size, -size, size);
+        rast.drawQuad3D(color1, v1.add(position), color2, v2.add(position), color1, v3.add(position), color2, v4.add(position));
 
-		// back
-		v1 = new Vector4(size, size, -size);
-		v2 = new Vector4(size, -size, -size);
-		v3 = new Vector4(-size, size, -size);
-		v4 = new Vector4(-size, -size, -size);
-		rast.drawQuad3D(color1, v1.add(position), color2, v2.add(position), color1, v3.add(position), color2, v4.add(position));
+        // back
+        v1 = new Vector4(size, size, -size);
+        v2 = new Vector4(size, -size, -size);
+        v3 = new Vector4(-size, size, -size);
+        v4 = new Vector4(-size, -size, -size);
+        rast.drawQuad3D(color1, v1.add(position), color2, v2.add(position), color1, v3.add(position), color2, v4.add(position));
 
-		// left
-		v1 = new Vector4(-size, size, -size);
-		v2 = new Vector4(-size, -size, -size);
-		v3 = new Vector4(-size, size, size);
-		v4 = new Vector4(-size, -size, size);
-		rast.drawQuad3D(color1, v1.add(position), color2, v2.add(position), color1, v3.add(position), color2, v4.add(position));
+        // left
+        v1 = new Vector4(-size, size, -size);
+        v2 = new Vector4(-size, -size, -size);
+        v3 = new Vector4(-size, size, size);
+        v4 = new Vector4(-size, -size, size);
+        rast.drawQuad3D(color1, v1.add(position), color2, v2.add(position), color1, v3.add(position), color2, v4.add(position));
 
-		// right
-		v1 = new Vector4(size, size, size);
-		v2 = new Vector4(size, -size, size);
-		v3 = new Vector4(size, size, -size);
-		v4 = new Vector4(size, -size, -size);
-		rast.drawQuad3D(color1, v1.add(position), color2, v2.add(position), color1, v3.add(position), color2, v4.add(position));
+        // right
+        v1 = new Vector4(size, size, size);
+        v2 = new Vector4(size, -size, size);
+        v3 = new Vector4(size, size, -size);
+        v4 = new Vector4(size, -size, -size);
+        rast.drawQuad3D(color1, v1.add(position), color2, v2.add(position), color1, v3.add(position), color2, v4.add(position));
 
-		// top
-		v1 = new Vector4(-size, size, -size);
-		v2 = new Vector4(-size, size, size);
-		v3 = new Vector4(size, size, -size);
-		v4 = new Vector4(size, size, size);
-		rast.drawQuad3D(color1, v1.add(position), color1, v2.add(position), color1, v3.add(position), color1, v4.add(position));
+        // top
+        v1 = new Vector4(-size, size, -size);
+        v2 = new Vector4(-size, size, size);
+        v3 = new Vector4(size, size, -size);
+        v4 = new Vector4(size, size, size);
+        rast.drawQuad3D(color1, v1.add(position), color1, v2.add(position), color1, v3.add(position), color1, v4.add(position));
 
-		// bottom
-		v1 = new Vector4(-size, -size, size);
-		v2 = new Vector4(-size, -size, -size);
-		v3 = new Vector4(size, -size, size);
-		v4 = new Vector4(size, -size, -size);
-		rast.drawQuad3D(color2, v1.add(position), color2, v2.add(position), color2, v3.add(position), color2, v4.add(position));
+        // bottom
+        v1 = new Vector4(-size, -size, size);
+        v2 = new Vector4(-size, -size, -size);
+        v3 = new Vector4(size, -size, size);
+        v4 = new Vector4(size, -size, -size);
+        rast.drawQuad3D(color2, v1.add(position), color2, v2.add(position), color2, v3.add(position), color2, v4.add(position));
     }
 }

@@ -49,11 +49,11 @@ class Vector4
 
     public toString():string
     {
-		return this.x + "," + this.y + "," + this.z + "," + this.w;
+        return this.x + "," + this.y + "," + this.z + "," + this.w;
     }
 
-	public toColorString():string
-	{
-		return "rgb(" + Math.floor(this.x) + "," + Math.floor(this.y) + "," + Math.floor(this.z) + ")";
-	}
+    public toColorString():string
+    {
+        return "rgb(" + Math.floor(this.x) + "," + Math.floor(this.y) + "," + Math.floor(this.z) + ")";
+    }
 }

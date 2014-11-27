@@ -39,24 +39,24 @@ class Edge
 
     public constructor(color1:Vector4, x1:number, y1:number, z1:number, color2:Vector4, x2:number, y2:number, z2:number)
     {
-	    if(y1 < y2) {
-		    this.color1 = color1;
-		    this.x1 = x1;
-		    this.y1 = y1;
-		    this.z1 = z1;
-		    this.color2 = color2;
-		    this.x2 = x2;
-		    this.y2 = y2;
-		    this.z2 = z2;
-	    } else {
-		    this.color1 = color2;
-		    this.x1 = x2;
-		    this.y1 = y2;
-		    this.z1 = z2;
-		    this.color2 = color1;
-		    this.x2 = x1;
-		    this.y2 = y1;
-		    this.z2 = z1;
-	    }
+        if(y1 < y2) {
+            this.color1 = color1;
+            this.x1 = x1;
+            this.y1 = y1;
+            this.z1 = z1;
+            this.color2 = color2;
+            this.x2 = x2;
+            this.y2 = y2;
+            this.z2 = z2;
+        } else {
+            this.color1 = color2;
+            this.x1 = x2;
+            this.y1 = y2;
+            this.z1 = z2;
+            this.color2 = color1;
+            this.x2 = x1;
+            this.y2 = y1;
+            this.z2 = z1;
+        }
     }
 }
