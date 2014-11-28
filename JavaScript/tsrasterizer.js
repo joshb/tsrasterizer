@@ -573,27 +573,29 @@ var __extends = this.__extends || function (d, b) {
 /// <reference path="Rasterizer.ts"/>
 var CanvasRasterizer = (function (_super) {
     __extends(CanvasRasterizer, _super);
-    function CanvasRasterizer(container, pixelSize) {
+    function CanvasRasterizer(container, pixelSize, scaled) {
         _super.call(this);
         this.pixels = null;
         this.depth = null;
         this.width = 0;
         this.height = 0;
         this.pixelSize = 0;
+        this.scaled = false;
         this.container = container;
-        this.buildCanvas(pixelSize);
+        this.buildCanvas(pixelSize, scaled);
         this.init();
     }
-    CanvasRasterizer.prototype.buildCanvas = function (pixelSize) {
+    CanvasRasterizer.prototype.buildCanvas = function (pixelSize, scaled) {
         while (this.container.hasChildNodes())
             this.container.removeChild(this.container.firstChild);
         this.width = Math.floor(this.container.offsetWidth / pixelSize) + 1;
         this.height = Math.floor(this.container.offsetHeight / pixelSize) + 1;
         this.pixelSize = Math.floor(pixelSize);
+        this.scaled = scaled;
         // create the canvas
         this.canvas = document.createElement("canvas");
-        this.canvas.width = this.container.offsetWidth;
-        this.canvas.height = this.container.offsetHeight;
+        this.canvas.width = scaled ? this.width : this.container.offsetWidth;
+        this.canvas.height = scaled ? this.height : this.container.offsetHeight;
         this.canvas.style.left = "0px";
         this.canvas.style.top = "0px";
         this.canvas.style.width = "100%";
@@ -624,7 +626,10 @@ var CanvasRasterizer = (function (_super) {
             return;
         // set the color and depth of the pixel
         this.context.fillStyle = color.toColorString();
-        this.context.fillRect(x * this.pixelSize, y * this.pixelSize, this.pixelSize, this.pixelSize);
+        if (this.scaled)
+            this.context.fillRect(x, y, 1, 1);
+        else
+            this.context.fillRect(x * this.pixelSize, y * this.pixelSize, this.pixelSize, this.pixelSize);
         this.depth[index] = z;
     };
     CanvasRasterizer.prototype.clear = function () {

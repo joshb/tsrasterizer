@@ -21,6 +21,7 @@
     rasterizer:
     <select id="rasterizer" onchange="createRasterizer()">
         <option selected="selected">canvas</option>
+        <option>canvas (scaled)</option>
         <option>div</option>
     </select>
 
@@ -85,8 +86,10 @@ function createRasterizer()
 
     if(selectedRasterizer == "div")
 	    rast = new DivRasterizer(framebuffer, selectedPixelSize);
+    else if(selectedRasterizer == "canvas")
+	    rast = new CanvasRasterizer(framebuffer, selectedPixelSize, false);
     else
-	    rast = new CanvasRasterizer(framebuffer, selectedPixelSize);
+	    rast = new CanvasRasterizer(framebuffer, selectedPixelSize, true);
 }
 
 function clearFramebufferChanged(clearFramebufferCheckbox)

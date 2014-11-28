@@ -37,18 +37,19 @@ class CanvasRasterizer extends Rasterizer
     private width:number = 0;
     private height:number = 0;
     private pixelSize:number = 0;
+    private scaled:boolean = false;
 
-    public constructor(container, pixelSize:number)
+    public constructor(container, pixelSize:number, scaled:boolean)
     {
         super();
 
         this.container = container;
-        this.buildCanvas(pixelSize);
+        this.buildCanvas(pixelSize, scaled);
 
         this.init();
     }
 
-    private buildCanvas(pixelSize:number):void
+    private buildCanvas(pixelSize:number, scaled:boolean):void
     {
         // remove existing canvas
         while(this.container.hasChildNodes())
@@ -57,11 +58,12 @@ class CanvasRasterizer extends Rasterizer
         this.width = Math.floor(this.container.offsetWidth / pixelSize) + 1;
         this.height = Math.floor(this.container.offsetHeight / pixelSize) + 1;
         this.pixelSize = Math.floor(pixelSize);
+        this.scaled = scaled;
 
         // create the canvas
         this.canvas = document.createElement("canvas");
-        this.canvas.width = this.container.offsetWidth;
-        this.canvas.height = this.container.offsetHeight;
+        this.canvas.width = scaled ? this.width : this.container.offsetWidth;
+        this.canvas.height = scaled ? this.height : this.container.offsetHeight;
         this.canvas.style.left = "0px";
         this.canvas.style.top = "0px";
         this.canvas.style.width = "100%";
@@ -102,7 +104,10 @@ class CanvasRasterizer extends Rasterizer
 
         // set the color and depth of the pixel
         this.context.fillStyle = color.toColorString();
-        this.context.fillRect(x * this.pixelSize, y * this.pixelSize, this.pixelSize, this.pixelSize);
+        if(this.scaled)
+            this.context.fillRect(x, y, 1, 1);
+        else
+            this.context.fillRect(x * this.pixelSize, y * this.pixelSize, this.pixelSize, this.pixelSize);
         this.depth[index] = z;
     }
 
