@@ -32,30 +32,6 @@ div.pixel
 	color: inherit;
 }
 
-#framebuffer.pixelSize16 > div.pixel
-{
-	width: 16px;
-	height: 16px;
-}
-
-#framebuffer.pixelSize32 > div.pixel
-{
-	width: 32px;
-	height: 32px;
-}
-
-#framebuffer.pixelSize64 > div.pixel
-{
-	width: 64px;
-	height: 64px;
-}
-
-#framebuffer.pixelSize128 > div.pixel
-{
-	width: 128px;
-	height: 128px;
-}
-
 a:link, a:visited, a:active
 {
 	display: block;

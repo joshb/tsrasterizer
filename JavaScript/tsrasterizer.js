@@ -297,67 +297,25 @@ var Span = (function () {
 /// <reference path="Vector4.ts"/>
 /// <reference path="Span.ts"/>
 var Rasterizer = (function () {
-    function Rasterizer(container) {
-        this._width = 0;
-        this._height = 0;
-        this._centerX = 0;
-        this._centerY = 0;
-        this._pixels = null;
-        this._depth = null;
+    function Rasterizer() {
         this._modelviewMatrix = null;
         this._projectionMatrix = null;
-        this._container = container;
-        this.buildPixels();
-        this._modelviewMatrix = new Matrix4();
-        this._projectionMatrix = Matrix4.perspective(Math.PI / 2.0, this._width / this._height, Rasterizer.ZNEAR, Rasterizer.ZFAR);
     }
-    Rasterizer.prototype.buildPixels = function () {
-        while (this._container.hasChildNodes())
-            this._container.removeChild(this._container.firstChild);
-        this._pixels = [];
-        // create first pixel
-        var pixel = document.createElement("div");
-        pixel.className = "pixel";
-        pixel.style.left = "0px";
-        pixel.style.top = "0px";
-        this._container.appendChild(pixel);
-        this._pixels.push(pixel);
-        var pixelWidth = pixel.offsetWidth;
-        var pixelHeight = pixel.offsetHeight;
-        // create the rest of the pixels
-        var framebufferWidth = this._container.offsetWidth;
-        var framebufferHeight = this._container.offsetHeight;
-        this._width = Math.floor(framebufferWidth / pixelWidth) + 1;
-        this._height = Math.floor(framebufferHeight / pixelHeight) + 1;
-        this._centerX = this._width / 2;
-        this._centerY = this._height / 2;
-        for (var y = 0; y < this._height; ++y) {
-            for (var x = ((y == 0) ? 1 : 0); x < this._width; ++x) {
-                pixel = document.createElement("div");
-                pixel.className = "pixel";
-                pixel.style.left = (x * pixelWidth) + "px";
-                pixel.style.top = (y * pixelHeight) + "px";
-                this._container.appendChild(pixel);
-                this._pixels.push(pixel);
-            }
-        }
-        // create depth buffer
-        this._depth = [];
-        for (var i = 0; i < this._width * this._height; ++i)
-            this._depth.push(1.0);
+    Rasterizer.prototype.init = function () {
+        this._modelviewMatrix = new Matrix4();
+        this._projectionMatrix = Matrix4.perspective(Math.PI / 2.0, this.getWidth() / this.getHeight(), Rasterizer.ZNEAR, Rasterizer.ZFAR);
+    };
+    Rasterizer.prototype.getWidth = function () {
+        return 0;
+    };
+    Rasterizer.prototype.getHeight = function () {
+        return 0;
     };
     Rasterizer.prototype.setPixel = function (x, y, z, color) {
-        // make sure the x/y coordinates are valid
-        if (x < 0 || x >= this._width || y < 0 || y >= this._height)
-            return;
-        // make sure the depth isn't greater than
-        // the depth of the currently stored pixel
-        var index = Math.floor(this._width * Math.floor(y) + Math.floor(x));
-        if (z > this._depth[index])
-            return;
-        // set the color and depth of the pixel
-        this._pixels[index].style.backgroundColor = color.toColorString();
-        this._depth[index] = z;
+        // do nothing - this should be implemented by subclasses
+    };
+    Rasterizer.prototype.clear = function () {
+        // do nothing - this should be implemented by subclasses
     };
     Rasterizer.prototype.drawSpan = function (span, y) {
         var xdiff = span.x2 - span.x1;
@@ -431,13 +389,13 @@ var Rasterizer = (function () {
         this.drawSpansBetweenEdges(edges[longEdge], edges[shortEdge2]);
     };
     Rasterizer.prototype.projectVertex = function (vertex) {
-        var v = this._modelviewMatrix.transform(vertex);
-        v = this._projectionMatrix.transform(v);
+        var m = this._projectionMatrix.multiply(this._modelviewMatrix);
+        var v = m.transform(vertex);
         if (v.z < Rasterizer.ZNEAR)
             return null;
         v = v.scale(1.0 / v.w);
-        var cx = this._centerX;
-        var cy = this._centerY;
+        var cx = Math.floor(this.getWidth() / 2);
+        var cy = Math.floor(this.getHeight() / 2);
         return new Vector4(cx + cx * v.x, cy - cy * v.y, v.z / Rasterizer.ZFAR, v.w);
     };
     Rasterizer.prototype.drawTriangle3D = function (color1, v1, color2, v2, color3, v3) {
@@ -498,18 +456,6 @@ var Rasterizer = (function () {
                 var color = color1.add(color2.subtract(color1).scale((y - y1) / ydiff));
                 this.setPixel(x, y, 0.0, color);
             }
-        }
-    };
-    Rasterizer.prototype.getWidth = function () {
-        return this._width;
-    };
-    Rasterizer.prototype.getHeight = function () {
-        return this._height;
-    };
-    Rasterizer.prototype.clear = function () {
-        for (var i = 0; i < this._pixels.length; ++i) {
-            this._pixels[i].style.backgroundColor = "transparent";
-            this._depth[i] = 1.0;
         }
     };
     Rasterizer.prototype.setModelviewMatrix = function (m) {
@@ -594,3 +540,188 @@ var Box = (function () {
     };
     return Box;
 })();
+/*
+ * Copyright (C) 2011, 2014 Josh A. Beam
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *   1. Redistributions of source code must retain the above copyright
+ *      notice, this list of conditions and the following disclaimer.
+ *   2. Redistributions in binary form must reproduce the above copyright
+ *      notice, this list of conditions and the following disclaimer in the
+ *      documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+var __extends = this.__extends || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    __.prototype = b.prototype;
+    d.prototype = new __();
+};
+/// <reference path="Rasterizer.ts"/>
+var CanvasRasterizer = (function (_super) {
+    __extends(CanvasRasterizer, _super);
+    function CanvasRasterizer(container, pixelSize) {
+        _super.call(this);
+        this.pixels = null;
+        this.depth = null;
+        this.width = 0;
+        this.height = 0;
+        this.pixelSize = 0;
+        this.container = container;
+        this.buildCanvas(pixelSize);
+        this.init();
+    }
+    CanvasRasterizer.prototype.buildCanvas = function (pixelSize) {
+        while (this.container.hasChildNodes())
+            this.container.removeChild(this.container.firstChild);
+        this.width = Math.floor(this.container.offsetWidth / pixelSize) + 1;
+        this.height = Math.floor(this.container.offsetHeight / pixelSize) + 1;
+        this.pixelSize = Math.floor(pixelSize);
+        // create the canvas
+        this.canvas = document.createElement("canvas");
+        this.canvas.width = this.container.offsetWidth;
+        this.canvas.height = this.container.offsetHeight;
+        this.canvas.style.left = "0px";
+        this.canvas.style.top = "0px";
+        this.canvas.style.width = "100%";
+        this.canvas.style.height = "100%";
+        this.container.appendChild(this.canvas);
+        this.context = this.canvas.getContext("2d");
+        // create depth buffer
+        this.depth = [];
+        for (var i = 0; i < this.width * this.height; ++i)
+            this.depth.push(1.0);
+    };
+    CanvasRasterizer.prototype.getWidth = function () {
+        return this.width;
+    };
+    CanvasRasterizer.prototype.getHeight = function () {
+        return this.height;
+    };
+    CanvasRasterizer.prototype.setPixel = function (x, y, z, color) {
+        x = Math.floor(x);
+        y = Math.floor(y);
+        // make sure the x/y coordinates are valid
+        if (x < 0 || x >= this.width || y < 0 || y >= this.height)
+            return;
+        // make sure the depth isn't greater than
+        // the depth of the currently stored pixel
+        var index = Math.floor(this.width * y + x);
+        if (z > this.depth[index])
+            return;
+        // set the color and depth of the pixel
+        this.context.fillStyle = color.toColorString();
+        this.context.fillRect(x * this.pixelSize, y * this.pixelSize, this.pixelSize, this.pixelSize);
+        this.depth[index] = z;
+    };
+    CanvasRasterizer.prototype.clear = function () {
+        this.context.fillStyle = "black";
+        this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        for (var i = 0; i < this.depth.length; ++i)
+            this.depth[i] = 1.0;
+    };
+    return CanvasRasterizer;
+})(Rasterizer);
+/*
+ * Copyright (C) 2011, 2014 Josh A. Beam
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *   1. Redistributions of source code must retain the above copyright
+ *      notice, this list of conditions and the following disclaimer.
+ *   2. Redistributions in binary form must reproduce the above copyright
+ *      notice, this list of conditions and the following disclaimer in the
+ *      documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+/// <reference path="Rasterizer.ts"/>
+var DivRasterizer = (function (_super) {
+    __extends(DivRasterizer, _super);
+    function DivRasterizer(container, pixelSize) {
+        _super.call(this);
+        this.pixels = null;
+        this.depth = null;
+        this.width = 0;
+        this.height = 0;
+        this.container = container;
+        this.buildPixels(pixelSize);
+        this.init();
+    }
+    DivRasterizer.prototype.buildPixels = function (pixelSize) {
+        while (this.container.hasChildNodes())
+            this.container.removeChild(this.container.firstChild);
+        this.pixels = [];
+        // create divs representing the pixels
+        this.width = Math.floor(this.container.offsetWidth / pixelSize) + 1;
+        this.height = Math.floor(this.container.offsetHeight / pixelSize) + 1;
+        for (var y = 0; y < this.height; ++y) {
+            for (var x = 0; x < this.width; ++x) {
+                var pixel = document.createElement("div");
+                pixel.className = "pixel";
+                pixel.style.left = (x * pixelSize) + "px";
+                pixel.style.top = (y * pixelSize) + "px";
+                pixel.style.width = pixelSize + "px";
+                pixel.style.height = pixelSize + "px";
+                this.container.appendChild(pixel);
+                this.pixels.push(pixel);
+            }
+        }
+        // create depth buffer
+        this.depth = [];
+        for (var i = 0; i < this.width * this.height; ++i)
+            this.depth.push(1.0);
+    };
+    DivRasterizer.prototype.getWidth = function () {
+        return this.width;
+    };
+    DivRasterizer.prototype.getHeight = function () {
+        return this.height;
+    };
+    DivRasterizer.prototype.setPixel = function (x, y, z, color) {
+        x = Math.floor(x);
+        y = Math.floor(y);
+        // make sure the x/y coordinates are valid
+        if (x < 0 || x >= this.width || y < 0 || y >= this.height)
+            return;
+        // make sure the depth isn't greater than
+        // the depth of the currently stored pixel
+        var index = Math.floor(this.width * y + x);
+        if (z > this.depth[index])
+            return;
+        // set the color and depth of the pixel
+        this.pixels[index].style.backgroundColor = color.toColorString();
+        this.depth[index] = z;
+    };
+    DivRasterizer.prototype.clear = function () {
+        for (var i = 0; i < this.pixels.length; ++i) {
+            this.pixels[i].style.backgroundColor = "transparent";
+            this.depth[i] = 1.0;
+        }
+    };
+    return DivRasterizer;
+})(Rasterizer);

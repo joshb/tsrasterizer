@@ -33,86 +33,33 @@ class Rasterizer
     public static ZNEAR = 0.1;
     public static ZFAR = 2000.0;
 
-    private _container;
-
-    private _width = 0;
-    private _height = 0;
-    private _centerX = 0;
-    private _centerY = 0;
-
-    private _pixels = null;
-    private _depth = null;
-
     private _modelviewMatrix:Matrix4 = null;
     private _projectionMatrix:Matrix4 = null;
 
-    public constructor(container)
+    protected init():void
     {
-        this._container = container;
-        this.buildPixels();
-
         this._modelviewMatrix = new Matrix4();
-        this._projectionMatrix = Matrix4.perspective(Math.PI / 2.0, this._width / this._height, Rasterizer.ZNEAR, Rasterizer.ZFAR);
+        this._projectionMatrix = Matrix4.perspective(Math.PI / 2.0, this.getWidth() / this.getHeight(), Rasterizer.ZNEAR, Rasterizer.ZFAR);
     }
 
-    private buildPixels():void
+    public getWidth():number
     {
-        // remove all existing pixels
-        while(this._container.hasChildNodes())
-            this._container.removeChild(this._container.firstChild);
+        return 0;
+    }
 
-        this._pixels = [];
-
-        // create first pixel
-        var pixel = document.createElement("div");
-        pixel.className = "pixel";
-        pixel.style.left = "0px";
-        pixel.style.top = "0px";
-        this._container.appendChild(pixel);
-        this._pixels.push(pixel);
-
-        var pixelWidth = pixel.offsetWidth;
-        var pixelHeight = pixel.offsetHeight;
-
-        // create the rest of the pixels
-        var framebufferWidth = this._container.offsetWidth;
-        var framebufferHeight = this._container.offsetHeight;
-        this._width = Math.floor(framebufferWidth / pixelWidth) + 1;
-        this._height = Math.floor(framebufferHeight / pixelHeight) + 1;
-        this._centerX = this._width / 2;
-        this._centerY = this._height / 2;
-        for(var y = 0; y < this._height; ++y) {
-            for(var x = ((y == 0) ? 1 : 0); x < this._width; ++x) {
-                pixel = document.createElement("div");
-                pixel.className = "pixel";
-                pixel.style.left = (x * pixelWidth) + "px";
-                pixel.style.top = (y * pixelHeight) + "px";
-                this._container.appendChild(pixel);
-                this._pixels.push(pixel);
-            }
-        }
-
-        // create depth buffer
-        this._depth = [];
-        for(var i = 0; i < this._width * this._height; ++i)
-            this._depth.push(1.0);
+    public getHeight():number
+    {
+        return 0;
     }
 
     public setPixel(x:number, y:number, z:number, color:Vector4):void
     {
-        // make sure the x/y coordinates are valid
-        if(x < 0 || x >= this._width || y < 0 || y >= this._height)
-            return;
+        // do nothing - this should be implemented by subclasses
+    }
 
-        // make sure the depth isn't greater than
-        // the depth of the currently stored pixel
-        var index = Math.floor(this._width * Math.floor(y) + Math.floor(x));
-        if(z > this._depth[index])
-            return;
-
-        // set the color and depth of the pixel
-        this._pixels[index].style.backgroundColor = color.toColorString();
-        this._depth[index] = z;
+    public clear():void
+    {
+        // do nothing - this should be implemented by subclasses
     }
 
     public drawSpan(span:Span, y:number):void
@@ -214,15 +161,15 @@ class Rasterizer
 
     public projectVertex(vertex:Vector4):Vector4
     {
-        var v = this._modelviewMatrix.transform(vertex);
-        v = this._projectionMatrix.transform(v);
+        var m = this._projectionMatrix.multiply(this._modelviewMatrix);
+        var v = m.transform(vertex);
         if(v.z < Rasterizer.ZNEAR)
             return null;
 
         v = v.scale(1.0 / v.w);
 
-        var cx = this._centerX;
-        var cy = this._centerY;
+        var cx = Math.floor(this.getWidth() / 2);
+        var cy = Math.floor(this.getHeight() / 2);
         return new Vector4(cx + cx * v.x, cy - cy * v.y, v.z / Rasterizer.ZFAR, v.w);
     }
 
@@ -294,24 +241,6 @@ class Rasterizer
                 var color = color1.add(color2.subtract(color1).scale((y - y1) / ydiff));
                 this.setPixel(x, y, 0.0, color);
             }
-        }
-    }
-
-    public getWidth():number
-    {
-        return this._width;
-    }
-
-    public getHeight():number
-    {
-        return this._height;
-    }
-
-    public clear():void
-    {
-        for(var i = 0; i < this._pixels.length; ++i) {
-            this._pixels[i].style.backgroundColor = "transparent";
-            this._depth[i] = 1.0;
         }
     }
 

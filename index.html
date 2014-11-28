@@ -8,7 +8,7 @@
 </head>
 <body>
 
-<div id="framebuffer" class="pixelSize32"></div>
+<div id="framebuffer"></div>
 
 <a href="TypeScript/Box.ts">Box.ts</a>
 <a href="TypeScript/Edge.ts">Edge.ts</a>
@@ -18,12 +18,20 @@
 <a href="TypeScript/Vector4.ts">Vector4.ts</a>
 
 <p>
+    rasterizer:
+    <select id="rasterizer" onchange="createRasterizer()">
+        <option selected="selected">canvas</option>
+        <option>div</option>
+    </select>
+
+<p>
 	pixel size:
-	<select onchange="pixelSizeChanged(this)">
-		<option value="pixelSize16">16x16</option>
-		<option value="pixelSize32" selected="selected">32x32</option>
-		<option value="pixelSize64">64x64</option>
-		<option value="pixelSize128">128x128</option>
+	<select id="pixelSize" onchange="createRasterizer()">
+		<option value="8">8x8</option>
+		<option value="16">16x16</option>
+		<option value="32" selected="selected">32x32</option>
+		<option value="64">64x64</option>
+		<option value="128">128x128</option>
 	</select>
 </p>
 
@@ -33,7 +41,9 @@
 </p>
 
 <script>
-var rast = new Rasterizer(document.getElementById("framebuffer"));
+var rast = null;
+createRasterizer();
+
 var clearFramebuffer = true;
 
 var boxes = new Array();
@@ -64,10 +74,19 @@ function render()
 
 setInterval(render, 50);
 
-function pixelSizeChanged(pixelSize)
+function createRasterizer()
 {
-	document.getElementById("framebuffer").className = pixelSize.options[pixelSize.selectedIndex].value;
-	rast = new Rasterizer(document.getElementById("framebuffer"));
+    var framebuffer = document.getElementById("framebuffer");
+    var rasterizer = document.getElementById("rasterizer");
+    var pixelSize = document.getElementById("pixelSize");
+
+    var selectedRasterizer = rasterizer.options[rasterizer.selectedIndex].value;
+    var selectedPixelSize = parseInt(pixelSize.options[pixelSize.selectedIndex].value);
+
+    if(selectedRasterizer == "div")
+	    rast = new DivRasterizer(framebuffer, selectedPixelSize);
+    else
+	    rast = new CanvasRasterizer(framebuffer, selectedPixelSize);
 }
 
 function clearFramebufferChanged(clearFramebufferCheckbox)
