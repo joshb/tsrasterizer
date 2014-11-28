@@ -1,61 +1,61 @@
 html, body
 {
-	width: 100%;
-	height: 100%;
+    width: 100%;
+    height: 100%;
 }
 
 body
 {
-	overflow: hidden;
-	margin: 0;
-	background-color: black;
-	color: white;
-	font-family: Andale Mono, Lucida Console, monospace;
-	font-size: 9pt;
-	text-shadow: black 2px 2px 2px;
+    overflow: hidden;
+    margin: 0;
+    background-color: black;
+    color: white;
+    font-family: Andale Mono, Lucida Console, monospace;
+    font-size: 9pt;
+    text-shadow: black 2px 2px 2px;
 }
 
 #framebuffer
 {
-	position: absolute;
-	left: 0;
-	top: 0;
-	width: 100%;
-	height: 100%;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
 }
 
 div.pixel
 {
-	display: block;
-	position: absolute;
-	background-color: transparent;
-	color: inherit;
+    display: block;
+    position: absolute;
+    background-color: transparent;
+    color: inherit;
 }
 
 a:link, a:visited, a:active
 {
-	display: block;
-	position: relative;
-	padding: 0.5em;
-	padding-left: 16px;
-	background-color: transparent;
-	color: inherit;
-	font-size: 16pt;
-	text-decoration: none;
-	-webkit-transition: padding-left 0.25s, font-size 0.1s;
-	-moz-transition: padding-left 0.25s, font-size 0.1s;
-	-o-transition: padding-left 0.25s, font-size 0.1s;
+    display: block;
+    position: relative;
+    padding: 0.5em;
+    padding-left: 16px;
+    background-color: transparent;
+    color: inherit;
+    font-size: 16pt;
+    text-decoration: none;
+    -webkit-transition: padding-left 0.25s, font-size 0.1s;
+    -moz-transition: padding-left 0.25s, font-size 0.1s;
+    -o-transition: padding-left 0.25s, font-size 0.1s;
 }
 
 a:hover
 {
-	padding-left: 32px;
-	background-color: rgba(64, 64, 127, 0.6);
-	color: inherit;
+    padding-left: 32px;
+    background-color: rgba(64, 64, 127, 0.6);
+    color: inherit;
 }
 
 p
 {
-	position: relative;
-	padding-left: 16px;
+    position: relative;
+    padding-left: 16px;
 }

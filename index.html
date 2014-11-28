@@ -28,19 +28,19 @@
     </select>
 
 <p>
-	pixel size:
-	<select id="pixelSize" onchange="createRasterizer()">
-		<option value="8">8x8</option>
-		<option value="16">16x16</option>
-		<option value="32" selected="selected">32x32</option>
-		<option value="64">64x64</option>
-		<option value="128">128x128</option>
-	</select>
+    pixel size:
+    <select id="pixelSize" onchange="createRasterizer()">
+        <option value="8">8x8</option>
+        <option value="16">16x16</option>
+        <option value="32" selected="selected">32x32</option>
+        <option value="64">64x64</option>
+        <option value="128">128x128</option>
+    </select>
 </p>
 
 <p>
-	<input id="clearFramebufferCheckbox" type="checkbox" onchange="clearFramebufferChanged(this)" checked="checked" />
-	<label for="clearFramebufferCheckbox">clear framebuffer</label>
+    <input id="clearFramebufferCheckbox" type="checkbox" onchange="clearFramebufferChanged(this)" checked="checked" />
+    <label for="clearFramebufferCheckbox">clear framebuffer</label>
 </p>
 
 <script>
@@ -62,17 +62,17 @@ boxes.push(new Box(new Vector4(1, 1, 1), 1, new Vector4(255, 0, 255)));
 var r = 0.0;
 function render()
 {
-	if(clearFramebuffer)
-		rast.clear();
+    if(clearFramebuffer)
+        rast.clear();
 
-	r += (Math.PI / 180.0) * 2;
-	var mr = Matrix4.rollRotation(r);
-	var my = Matrix4.yawRotation(-r * 1.5);
-	var mt = Matrix4.translation(new Vector4(0, 0, -6));
-	rast.setModelviewMatrix(mt.multiply(my.multiply(mr)));
+    r += (Math.PI / 180.0) * 2;
+    var mr = Matrix4.rollRotation(r);
+    var my = Matrix4.yawRotation(-r * 1.5);
+    var mt = Matrix4.translation(new Vector4(0, 0, -6));
+    rast.setModelviewMatrix(mt.multiply(my.multiply(mr)));
 
-	for(var i = 0; i < boxes.length; ++i)
-		boxes[i].render(rast);
+    for(var i = 0; i < boxes.length; ++i)
+        boxes[i].render(rast);
 }
 
 setInterval(render, 50);
@@ -87,16 +87,16 @@ function createRasterizer()
     var selectedPixelSize = parseInt(pixelSize.options[pixelSize.selectedIndex].value);
 
     if(selectedRasterizer == "div")
-	    rast = new DivRasterizer(framebuffer, selectedPixelSize);
+        rast = new DivRasterizer(framebuffer, selectedPixelSize);
     else if(selectedRasterizer == "canvas")
-	    rast = new CanvasRasterizer(framebuffer, selectedPixelSize, false);
+        rast = new CanvasRasterizer(framebuffer, selectedPixelSize, false);
     else
-	    rast = new CanvasRasterizer(framebuffer, selectedPixelSize, true);
+        rast = new CanvasRasterizer(framebuffer, selectedPixelSize, true);
 }
 
 function clearFramebufferChanged(clearFramebufferCheckbox)
 {
-	clearFramebuffer = clearFramebufferCheckbox.checked;
+    clearFramebuffer = clearFramebufferCheckbox.checked;
 }
 </script>
 
