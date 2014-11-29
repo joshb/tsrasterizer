@@ -583,7 +583,6 @@ var CanvasRasterizer = (function (_super) {
     __extends(CanvasRasterizer, _super);
     function CanvasRasterizer(container, pixelSize) {
         _super.call(this);
-        this.depth = [];
         this.buildCanvas(container, pixelSize);
         this.init();
     }
@@ -613,19 +612,29 @@ var CanvasRasterizer = (function (_super) {
         // make sure the depth isn't greater than
         // the depth of the currently stored pixel
         var index = this.width * y + x;
-        if (index < this.depth.length && z > this.depth[index])
+        if (this.depth[index] != null && z > this.depth[index])
             return;
-        // set the color and depth of the pixel
+        // do alpha blending
+        var oldColor = this.pixels[index];
+        if (color.w != 255 && oldColor != null) {
+            var fa = color.w / 255.0;
+            color = color.scale(fa).add(oldColor.scale(1.0 - fa));
+        }
+        // calculate the rgba color data
         var r = color.x & 0xff;
         var g = color.y & 0xff;
         var b = color.z & 0xff;
         var a = color.w & 0xff;
-        this.data[index] = (a << 24) | (b << 16) | (g << 8) | r;
+        var c = (a << 24) | (b << 16) | (g << 8) | r;
+        // set the color and depth of the pixel
+        this.data[index] = c;
+        this.pixels[index] = color;
         this.depth[index] = z;
     };
     CanvasRasterizer.prototype.clear = function () {
         this.imageData = this.context.createImageData(this.width, this.height);
         this.data = new Uint32Array(this.imageData.data.buffer);
+        this.pixels = [];
         this.depth = [];
     };
     CanvasRasterizer.prototype.flush = function () {
