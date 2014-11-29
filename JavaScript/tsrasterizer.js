@@ -580,32 +580,27 @@ var __extends = this.__extends || function (d, b) {
 /// <reference path="Rasterizer.ts"/>
 var CanvasRasterizer = (function (_super) {
     __extends(CanvasRasterizer, _super);
-    function CanvasRasterizer(container, pixelSize, scaled) {
+    function CanvasRasterizer(container, pixelSize) {
         _super.call(this);
         this.depth = [];
-        this.pixelSize = 0;
-        this.scaled = false;
-        this.container = container;
-        this.buildCanvas(pixelSize, scaled);
+        this.buildCanvas(container, pixelSize);
         this.init();
     }
-    CanvasRasterizer.prototype.buildCanvas = function (pixelSize, scaled) {
-        while (this.container.hasChildNodes())
-            this.container.removeChild(this.container.firstChild);
-        this.width = Math.floor(this.container.offsetWidth / pixelSize) + 1;
-        this.height = Math.floor(this.container.offsetHeight / pixelSize) + 1;
-        this.pixelSize = Math.floor(pixelSize);
-        this.scaled = scaled;
+    CanvasRasterizer.prototype.buildCanvas = function (container, pixelSize) {
+        while (container.hasChildNodes())
+            container.removeChild(container.firstChild);
+        this.width = Math.floor(container.offsetWidth / pixelSize) + 1;
+        this.height = Math.floor(container.offsetHeight / pixelSize) + 1;
         // create the canvas
-        this.canvas = document.createElement("canvas");
-        this.canvas.width = scaled ? this.width : this.container.offsetWidth;
-        this.canvas.height = scaled ? this.height : this.container.offsetHeight;
-        this.canvas.style.left = "0px";
-        this.canvas.style.top = "0px";
-        this.canvas.style.width = "100%";
-        this.canvas.style.height = "100%";
-        this.container.appendChild(this.canvas);
-        this.context = this.canvas.getContext("2d");
+        var canvas = document.createElement("canvas");
+        canvas.width = this.width;
+        canvas.height = this.height;
+        canvas.style.left = "0px";
+        canvas.style.top = "0px";
+        canvas.style.width = "100%";
+        canvas.style.height = "100%";
+        container.appendChild(canvas);
+        this.context = canvas.getContext("2d");
         this.clear();
     };
     CanvasRasterizer.prototype.setPixel = function (x, y, z, color) {
@@ -620,27 +615,15 @@ var CanvasRasterizer = (function (_super) {
         if (index < this.depth.length && z > this.depth[index])
             return;
         // set the color and depth of the pixel
-        if (this.scaled) {
-            var r = color.x & 0xff;
-            var g = color.y & 0xff;
-            var b = color.z & 0xff;
-            this.data[index] = (255 << 24) | (b << 16) | (g << 8) | r;
-        }
-        else {
-            this.context.fillStyle = color.toColorString();
-            this.context.fillRect(x * this.pixelSize, y * this.pixelSize, this.pixelSize, this.pixelSize);
-        }
+        var r = color.x & 0xff;
+        var g = color.y & 0xff;
+        var b = color.z & 0xff;
+        this.data[index] = (255 << 24) | (b << 16) | (g << 8) | r;
         this.depth[index] = z;
     };
     CanvasRasterizer.prototype.clear = function () {
-        if (this.scaled) {
-            this.imageData = this.context.createImageData(this.canvas.width, this.canvas.height);
-            this.data = new Uint32Array(this.imageData.data.buffer);
-        }
-        else {
-            this.context.fillStyle = "black";
-            this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
-        }
+        this.imageData = this.context.createImageData(this.width, this.height);
+        this.data = new Uint32Array(this.imageData.data.buffer);
         this.depth = [];
     };
     CanvasRasterizer.prototype.flush = function () {

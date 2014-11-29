@@ -23,13 +23,15 @@
     rasterizer:
     <select id="rasterizer" onchange="createRasterizer()">
         <option selected="selected">canvas</option>
-        <option>canvas (scaled)</option>
         <option>div</option>
     </select>
 
 <p>
     pixel size:
     <select id="pixelSize" onchange="createRasterizer()">
+        <option value="1">1x1</option>
+        <option value="2">2x2</option>
+        <option value="4">4x4</option>
         <option value="8">8x8</option>
         <option value="16">16x16</option>
         <option value="32" selected="selected">32x32</option>
@@ -73,6 +75,8 @@ function render()
 
     for(var i = 0; i < boxes.length; ++i)
         boxes[i].render(rast);
+
+    rast.flush();
 }
 
 setInterval(render, 50);
@@ -88,10 +92,8 @@ function createRasterizer()
 
     if(selectedRasterizer == "div")
         rast = new DivRasterizer(framebuffer, selectedPixelSize);
-    else if(selectedRasterizer == "canvas")
-        rast = new CanvasRasterizer(framebuffer, selectedPixelSize, false);
     else
-        rast = new CanvasRasterizer(framebuffer, selectedPixelSize, true);
+        rast = new CanvasRasterizer(framebuffer, selectedPixelSize);
 }
 
 function clearFramebufferChanged(clearFramebufferCheckbox)
