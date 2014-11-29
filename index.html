@@ -4,7 +4,7 @@
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <title>rasterizer</title>
 <link rel="stylesheet" type="text/css" href="Styles/Rasterizer.css" />
-<script src="JavaScript/RasterizerAsm.js"></script>
+<script src="JavaScript/Framebuffer.js"></script>
 <script src="JavaScript/tsrasterizer.js"></script>
 </head>
 <body>
@@ -12,8 +12,6 @@
 <div id="framebuffer"></div>
 
 <a href="TypeScript/Box.ts">Box.ts</a>
-<a href="TypeScript/CanvasRasterizer.ts">CanvasRasterizer.ts</a>
-<a href="TypeScript/DivRasterizer.ts">DivRasterizer.ts</a>
 <a href="TypeScript/Edge.ts">Edge.ts</a>
 <a href="TypeScript/Matrix4.ts">Matrix4.ts</a>
 <a href="TypeScript/Rasterizer.ts">Rasterizer.ts</a>
@@ -21,15 +19,9 @@
 <a href="TypeScript/Vector4.ts">Vector4.ts</a>
 
 <p>
-    rasterizer:
-    <select id="rasterizer" onchange="createRasterizer()">
-        <option selected="selected">canvas</option>
-        <option>div</option>
-    </select>
-
-<p>
     pixel size:
     <select id="pixelSize" onchange="createRasterizer()">
+        <option value="1">1x1</option>
         <option value="2">2x2</option>
         <option value="4">4x4</option>
         <option value="8">8x8</option>
@@ -46,10 +38,6 @@
 </p>
 
 <script>
-var heap = new ArrayBuffer(0x1000);
-var heapFloat64 = new Float64Array(heap);
-var asm = RasterizerAsm(window, null, heap);
-
 var rast = null;
 createRasterizer();
 
@@ -88,16 +76,10 @@ setInterval(render, 50);
 function createRasterizer()
 {
     var framebuffer = document.getElementById("framebuffer");
-    var rasterizer = document.getElementById("rasterizer");
     var pixelSize = document.getElementById("pixelSize");
 
-    var selectedRasterizer = rasterizer.options[rasterizer.selectedIndex].value;
     var selectedPixelSize = parseInt(pixelSize.options[pixelSize.selectedIndex].value);
-
-    if(selectedRasterizer == "div")
-        rast = new DivRasterizer(framebuffer, selectedPixelSize);
-    else
-        rast = new CanvasRasterizer(framebuffer, selectedPixelSize);
+    rast = new Rasterizer(framebuffer, selectedPixelSize);
 }
 
 function clearFramebufferChanged(clearFramebufferCheckbox)

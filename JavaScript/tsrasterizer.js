@@ -43,8 +43,7 @@ var Vector4 = (function () {
         return new Vector4(this.x * f, this.y * f, this.z * f, this.w * f);
     };
     Vector4.prototype.lerp = function (end, f) {
-        asm.lerpVector(this.x, this.y, this.z, this.w, end.x, end.y, end.z, end.w, f);
-        return new Vector4(heapFloat64[0], heapFloat64[1], heapFloat64[2], heapFloat64[3]);
+        return this.add(end.subtract(this).scale(f));
     };
     Vector4.prototype.toString = function () {
         return this.x + "," + this.y + "," + this.z + "," + this.w;
@@ -307,24 +306,58 @@ var Span = (function () {
 /// <reference path="Vector4.ts"/>
 /// <reference path="Span.ts"/>
 var Rasterizer = (function () {
-    function Rasterizer() {
+    function Rasterizer(container, pixelSize) {
+        this.littleEndian = 0;
         this.width = 0;
         this.height = 0;
+        this.heapSize = 0;
         this.modelviewMatrix = null;
         this.projectionMatrix = null;
+        this.buildCanvas(container, pixelSize);
+        this.init();
+        // determine the endianness to use when writing pixel data
+        var buf = new ArrayBuffer(2);
+        var buf8 = new Uint8Array(buf);
+        var buf16 = new Uint16Array(buf);
+        buf8[0] = 1;
+        buf8[1] = 0;
+        this.littleEndian = buf16[0] & 0xff;
     }
+    Rasterizer.prototype.buildCanvas = function (container, pixelSize) {
+        while (container.hasChildNodes())
+            container.removeChild(container.firstChild);
+        this.width = Math.floor(container.offsetWidth / pixelSize) + 1;
+        this.height = Math.floor(container.offsetHeight / pixelSize) + 1;
+        // create the canvas
+        var canvas = document.createElement("canvas");
+        canvas.width = this.width;
+        canvas.height = this.height;
+        canvas.style.left = "0px";
+        canvas.style.top = "0px";
+        canvas.style.width = "100%";
+        canvas.style.height = "100%";
+        container.appendChild(canvas);
+        this.context = canvas.getContext("2d");
+        this.clear();
+    };
     Rasterizer.prototype.init = function () {
         this.modelviewMatrix = new Matrix4();
         this.projectionMatrix = Matrix4.perspective(Math.PI / 2.0, this.width / this.height, Rasterizer.ZNEAR, Rasterizer.ZFAR);
     };
-    Rasterizer.prototype.setPixel = function (x, y, z, color) {
-        // do nothing - this should be implemented by subclasses
-    };
     Rasterizer.prototype.clear = function () {
-        // do nothing - this should be implemented by subclasses
+        this.imageData = this.context.createImageData(this.width, this.height);
+        if (this.heapSize == 0) {
+            this.heapSize = 1 | 0;
+            while (this.heapSize < this.imageData.data.length + this.width * this.height * 8)
+                this.heapSize = (this.heapSize * 2) | 0;
+        }
+        var heap = new ArrayBuffer(this.heapSize);
+        this.heapView = new Uint8Array(heap, 0, this.imageData.data.length);
+        this.framebuffer = new Framebuffer(window, null, heap);
     };
     Rasterizer.prototype.flush = function () {
-        // do nothing - this should be implemented by subclasses
+        this.imageData.data.set(this.heapView);
+        this.context.putImageData(this.imageData, 0, 0);
     };
     Rasterizer.prototype.drawSpan = function (span, y) {
         if (y < 0 || y >= this.height)
@@ -334,15 +367,7 @@ var Rasterizer = (function () {
             return;
         var factor = 0.0;
         var step = 1.0 / xdiff;
-        // draw pixels in the span
-        var xend = span.x2 - 1;
-        for (var x = span.x1; x < xend; ++x) {
-            this.setPixel(x, y, asm.lerp(span.z1, span.z2, factor), span.color1.lerp(span.color2, factor));
-            factor += step;
-        }
-        // the last pixel is drawn outside of the loop to
-        // avoid incrementing color and z unnecessarily
-        this.setPixel(x, y, asm.lerp(span.z1, span.z2, factor), span.color1.lerp(span.color2, factor));
+        this.framebuffer.drawSpan(this.littleEndian, this.width, this.height, factor, step, y, span.x1, 1.0 - span.z1, span.color1.x, span.color1.y, span.color1.z, span.color1.w, span.x2, 1.0 - span.z2, span.color2.x, span.color2.y, span.color2.z, span.color2.w);
     };
     Rasterizer.prototype.drawSpansBetweenEdges = function (e1, e2) {
         // calculate difference between the y coordinates
@@ -367,12 +392,12 @@ var Rasterizer = (function () {
         var span;
         for (var y = e2.y1; y < yend; ++y) {
             // create and draw span
-            span = new Span(e1.color1.lerp(e1.color2, factor1), asm.lerp(e1.x1, e1.x2, factor1), asm.lerp(e1.z1, e1.z2, factor1), e2.color1.lerp(e2.color2, factor2), asm.lerp(e2.x1, e2.x2, factor2), asm.lerp(e2.z1, e2.z2, factor2));
+            span = new Span(e1.color1.lerp(e1.color2, factor1), this.framebuffer.lerp(e1.x1, e1.x2, factor1), this.framebuffer.lerp(e1.z1, e1.z2, factor1), e2.color1.lerp(e2.color2, factor2), this.framebuffer.lerp(e2.x1, e2.x2, factor2), this.framebuffer.lerp(e2.z1, e2.z2, factor2));
             this.drawSpan(span, y);
             factor1 += step1;
             factor2 += step2;
         }
-        span = new Span(e1.color1.lerp(e1.color2, factor1), asm.lerp(e1.x1, e1.x2, factor1), asm.lerp(e1.z1, e1.z2, factor1), e2.color1.lerp(e2.color2, factor2), asm.lerp(e2.x1, e2.x2, factor2), asm.lerp(e2.z1, e2.z2, factor2));
+        span = new Span(e1.color1.lerp(e1.color2, factor1), this.framebuffer.lerp(e1.x1, e1.x2, factor1), this.framebuffer.lerp(e1.z1, e1.z2, factor1), e2.color1.lerp(e2.color2, factor2), this.framebuffer.lerp(e2.x1, e2.x2, factor2), this.framebuffer.lerp(e2.z1, e2.z2, factor2));
         this.drawSpan(span, y);
     };
     Rasterizer.prototype.drawTriangle = function (color1, v1, color2, v2, color3, v3) {
@@ -503,170 +528,3 @@ var Box = (function () {
     };
     return Box;
 })();
-/*
- * Copyright (C) 2011, 2014 Josh A. Beam
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- *   1. Redistributions of source code must retain the above copyright
- *      notice, this list of conditions and the following disclaimer.
- *   2. Redistributions in binary form must reproduce the above copyright
- *      notice, this list of conditions and the following disclaimer in the
- *      documentation and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
- * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
- * WHETHER IN CONTACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
- * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
-var __extends = this.__extends || function (d, b) {
-    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-    function __() { this.constructor = d; }
-    __.prototype = b.prototype;
-    d.prototype = new __();
-};
-/// <reference path="Rasterizer.ts"/>
-var CanvasRasterizer = (function (_super) {
-    __extends(CanvasRasterizer, _super);
-    function CanvasRasterizer(container, pixelSize) {
-        _super.call(this);
-        this.rgba = asm.isLittleEndian() ? asm.rgbaLE : asm.rgbaBE;
-        this.buildCanvas(container, pixelSize);
-        this.init();
-    }
-    CanvasRasterizer.prototype.buildCanvas = function (container, pixelSize) {
-        while (container.hasChildNodes())
-            container.removeChild(container.firstChild);
-        this.width = Math.floor(container.offsetWidth / pixelSize) + 1;
-        this.height = Math.floor(container.offsetHeight / pixelSize) + 1;
-        // create the canvas
-        var canvas = document.createElement("canvas");
-        canvas.width = this.width;
-        canvas.height = this.height;
-        canvas.style.left = "0px";
-        canvas.style.top = "0px";
-        canvas.style.width = "100%";
-        canvas.style.height = "100%";
-        container.appendChild(canvas);
-        this.context = canvas.getContext("2d");
-        this.clear();
-    };
-    CanvasRasterizer.prototype.setPixel = function (x, y, z, color) {
-        x |= 0;
-        y |= 0;
-        // make sure the x/y coordinates are valid
-        if (x < 0 || x >= this.width || y < 0 || y >= this.height)
-            return;
-        // make sure the depth isn't greater than
-        // the depth of the currently stored pixel
-        var index = this.width * y + x;
-        if (this.depth[index] != null && z > this.depth[index])
-            return;
-        // do alpha blending
-        var oldColor = this.pixels[index];
-        if (color.w != 255 && oldColor != null) {
-            var fa = color.w / 255.0;
-            color = color.scale(fa).add(oldColor.scale(1.0 - fa));
-        }
-        // calculate the rgba color data
-        var c = this.rgba(color.x, color.y, color.z, color.w);
-        // set the color and depth of the pixel
-        this.data[index] = c;
-        this.pixels[index] = color;
-        this.depth[index] = z;
-    };
-    CanvasRasterizer.prototype.clear = function () {
-        this.imageData = this.context.createImageData(this.width, this.height);
-        this.data = new Uint32Array(this.imageData.data.buffer);
-        this.pixels = [];
-        this.depth = [];
-    };
-    CanvasRasterizer.prototype.flush = function () {
-        this.context.putImageData(this.imageData, 0, 0);
-    };
-    return CanvasRasterizer;
-})(Rasterizer);
-/*
- * Copyright (C) 2011, 2014 Josh A. Beam
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- *   1. Redistributions of source code must retain the above copyright
- *      notice, this list of conditions and the following disclaimer.
- *   2. Redistributions in binary form must reproduce the above copyright
- *      notice, this list of conditions and the following disclaimer in the
- *      documentation and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
- * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
- * WHETHER IN CONTACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
- * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
-/// <reference path="Rasterizer.ts"/>
-var DivRasterizer = (function (_super) {
-    __extends(DivRasterizer, _super);
-    function DivRasterizer(container, pixelSize) {
-        _super.call(this);
-        this.pixels = [];
-        this.depth = [];
-        this.container = container;
-        this.buildPixels(pixelSize);
-        this.init();
-    }
-    DivRasterizer.prototype.buildPixels = function (pixelSize) {
-        while (this.container.hasChildNodes())
-            this.container.removeChild(this.container.firstChild);
-        // create divs representing the pixels
-        this.width = Math.floor(this.container.offsetWidth / pixelSize) + 1;
-        this.height = Math.floor(this.container.offsetHeight / pixelSize) + 1;
-        for (var y = 0; y < this.height; ++y) {
-            for (var x = 0; x < this.width; ++x) {
-                var pixel = document.createElement("div");
-                pixel.className = "pixel";
-                pixel.style.left = (x * pixelSize) + "px";
-                pixel.style.top = (y * pixelSize) + "px";
-                pixel.style.width = pixelSize + "px";
-                pixel.style.height = pixelSize + "px";
-                this.container.appendChild(pixel);
-                this.pixels.push(pixel);
-            }
-        }
-    };
-    DivRasterizer.prototype.setPixel = function (x, y, z, color) {
-        x = Math.floor(x);
-        y = Math.floor(y);
-        // make sure the x/y coordinates are valid
-        if (x < 0 || x >= this.width || y < 0 || y >= this.height)
-            return;
-        // make sure the depth isn't greater than
-        // the depth of the currently stored pixel
-        var index = Math.floor(this.width * y + x);
-        if (index < this.depth.length && z > this.depth[index])
-            return;
-        // set the color and depth of the pixel
-        this.pixels[index].style.backgroundColor = color.toColorString();
-        this.depth[index] = z;
-    };
-    DivRasterizer.prototype.clear = function () {
-        for (var i = 0; i < this.pixels.length; ++i)
-            this.pixels[i].style.backgroundColor = "transparent";
-        this.depth = [];
-    };
-    return DivRasterizer;
-})(Rasterizer);

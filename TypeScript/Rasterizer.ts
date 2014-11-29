@@ -28,16 +28,62 @@
 /// <reference path="Vector4.ts"/>
 /// <reference path="Span.ts"/>
 
+declare function Framebuffer(stdlib, foreign, heap):void;
+
 class Rasterizer
 {
     public static ZNEAR = 0.1;
     public static ZFAR = 2000.0;
 
-    protected width:number = 0;
-    protected height:number = 0;
+    private littleEndian:number = 0;
+    private width:number = 0;
+    private height:number = 0;
+
+    private context;
+    private imageData;
+    private heapSize = 0;
+    private heapView;
+    private framebuffer;
 
     private modelviewMatrix:Matrix4 = null;
     private projectionMatrix:Matrix4 = null;
+
+    constructor(container, pixelSize:number)
+    {
+        this.buildCanvas(container, pixelSize);
+        this.init();
+
+        // determine the endianness to use when writing pixel data
+        var buf = new ArrayBuffer(2);
+        var buf8 = new Uint8Array(buf);
+        var buf16 = new Uint16Array(buf);
+        buf8[0] = 1;
+        buf8[1] = 0;
+        this.littleEndian = buf16[0] & 0xff;
+    }
+
+    private buildCanvas(container, pixelSize:number):void
+    {
+        // remove existing canvas
+        while(container.hasChildNodes())
+            container.removeChild(container.firstChild);
+
+        this.width = Math.floor(container.offsetWidth / pixelSize) + 1;
+        this.height = Math.floor(container.offsetHeight / pixelSize) + 1;
+
+        // create the canvas
+        var canvas = document.createElement("canvas");
+        canvas.width = this.width;
+        canvas.height = this.height;
+        canvas.style.left = "0px";
+        canvas.style.top = "0px";
+        canvas.style.width = "100%";
+        canvas.style.height = "100%";
+        container.appendChild(canvas);
+
+        this.context = canvas.getContext("2d");
+        this.clear();
+    }
 
     protected init():void
     {
@@ -45,19 +91,25 @@ class Rasterizer
         this.projectionMatrix = Matrix4.perspective(Math.PI / 2.0, this.width / this.height, Rasterizer.ZNEAR, Rasterizer.ZFAR);
     }
 
-    public setPixel(x:number, y:number, z:number, color:Vector4):void
-    {
-        // do nothing - this should be implemented by subclasses
-    }
-
     public clear():void
     {
-        // do nothing - this should be implemented by subclasses
+        this.imageData = this.context.createImageData(this.width, this.height);
+
+        if(this.heapSize == 0) {
+            this.heapSize = 1|0;
+            while(this.heapSize < this.imageData.data.length + this.width * this.height * 8)
+                this.heapSize = (this.heapSize * 2)|0;
+        }
+
+        var heap = new ArrayBuffer(this.heapSize);
+        this.heapView = new Uint8Array(heap, 0, this.imageData.data.length);
+        this.framebuffer = new Framebuffer(window, null, heap);
     }
 
     public flush():void
     {
-        // do nothing - this should be implemented by subclasses
+        this.imageData.data.set(this.heapView);
+        this.context.putImageData(this.imageData, 0, 0);
     }
 
     public drawSpan(span:Span, y:number):void
@@ -72,16 +124,9 @@ class Rasterizer
         var factor = 0.0;
         var step = 1.0 / xdiff;
 
-        // draw pixels in the span
-        var xend = span.x2 - 1;
-        for(var x = span.x1; x < xend; ++x) {
-            this.setPixel(x, y, asm.lerp(span.z1, span.z2, factor), span.color1.lerp(span.color2, factor));
-            factor += step;
-        }
-
-        // the last pixel is drawn outside of the loop to
-        // avoid incrementing color and z unnecessarily
-        this.setPixel(x, y, asm.lerp(span.z1, span.z2, factor), span.color1.lerp(span.color2, factor));
+        this.framebuffer.drawSpan(this.littleEndian, this.width, this.height, factor, step, y,
+                                  span.x1, 1.0 - span.z1, span.color1.x, span.color1.y, span.color1.z, span.color1.w,
+                                  span.x2, 1.0 - span.z2, span.color2.x, span.color2.y, span.color2.z, span.color2.w);
     }
 
     public drawSpansBetweenEdges(e1:Edge, e2:Edge):void
@@ -112,22 +157,22 @@ class Rasterizer
         for(var y = e2.y1; y < yend; ++y) {
             // create and draw span
             span = new Span(e1.color1.lerp(e1.color2, factor1),
-                            asm.lerp(e1.x1, e1.x2, factor1),
-                            asm.lerp(e1.z1, e1.z2, factor1),
+                            this.framebuffer.lerp(e1.x1, e1.x2, factor1),
+                            this.framebuffer.lerp(e1.z1, e1.z2, factor1),
                             e2.color1.lerp(e2.color2, factor2),
-                            asm.lerp(e2.x1, e2.x2, factor2),
-                            asm.lerp(e2.z1, e2.z2, factor2));
+                            this.framebuffer.lerp(e2.x1, e2.x2, factor2),
+                            this.framebuffer.lerp(e2.z1, e2.z2, factor2));
             this.drawSpan(span, y);
             factor1 += step1;
             factor2 += step2;
         }
 
         span = new Span(e1.color1.lerp(e1.color2, factor1),
-                        asm.lerp(e1.x1, e1.x2, factor1),
-                        asm.lerp(e1.z1, e1.z2, factor1),
+                        this.framebuffer.lerp(e1.x1, e1.x2, factor1),
+                        this.framebuffer.lerp(e1.z1, e1.z2, factor1),
                         e2.color1.lerp(e2.color2, factor2),
-                        asm.lerp(e2.x1, e2.x2, factor2),
-                        asm.lerp(e2.z1, e2.z2, factor2));
+                        this.framebuffer.lerp(e2.x1, e2.x2, factor2),
+                        this.framebuffer.lerp(e2.z1, e2.z2, factor2));
         this.drawSpan(span, y);
     }
 
