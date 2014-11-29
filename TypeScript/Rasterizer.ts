@@ -69,17 +69,27 @@ class Rasterizer
         if(xdiff == 0)
             return;
 
-        var colordiff = span.color2.subtract(span.color1);
-        var zdiff = span.z2 - span.z1;
+        var step = 1.0 / xdiff;
 
-        var factor = 0.0;
-        var factorStep = 1.0 / xdiff;
+        var color = span.color1;
+        var colorDiff = span.color2.subtract(color);
+        var colorStep = colorDiff.scale(step);
 
-        // draw each pixel in the span
-        for(var x = span.x1; x < span.x2; ++x) {
-            this.setPixel(x, y, span.z1 + zdiff * factor, span.color1.add(colordiff.scale(factor)));
-            factor += factorStep;
+        var z = span.z1;
+        var zdiff = span.z2 - z;
+        var zstep = zdiff * step;
+
+        // draw pixels in the span
+        var xend = span.x2 - 1;
+        for(var x = span.x1; x < xend; ++x) {
+            this.setPixel(x, y, z, color);
+            color = color.add(colorStep);
+            z += zstep;
         }
+
+        // the last pixel is drawn outside of the loop to
+        // avoid incrementing color and z unnecessarily
+        this.setPixel(xend, y, z, color);
     }
 
     public drawSpansBetweenEdges(e1:Edge, e2:Edge):void
