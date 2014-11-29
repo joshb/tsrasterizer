@@ -83,7 +83,8 @@ class CanvasRasterizer extends Rasterizer
         var r = color.x & 0xff;
         var g = color.y & 0xff;
         var b = color.z & 0xff;
-        this.data[index] = (255 << 24) | (b << 16) | (g << 8) | r;
+        var a = color.w & 0xff;
+        this.data[index] = (a << 24) | (b << 16) | (g << 8) | r;
         this.depth[index] = z;
     }
 

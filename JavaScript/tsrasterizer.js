@@ -508,6 +508,7 @@ var Box = (function () {
         var size = this.size / 2;
         var color1 = this.color;
         var color2 = color1.scale(0.75);
+        color2.w = color1.w;
         // front
         var v1 = new Vector4(-size, size, size);
         var v2 = new Vector4(-size, -size, size);
@@ -618,7 +619,8 @@ var CanvasRasterizer = (function (_super) {
         var r = color.x & 0xff;
         var g = color.y & 0xff;
         var b = color.z & 0xff;
-        this.data[index] = (255 << 24) | (b << 16) | (g << 8) | r;
+        var a = color.w & 0xff;
+        this.data[index] = (a << 24) | (b << 16) | (g << 8) | r;
         this.depth[index] = z;
     };
     CanvasRasterizer.prototype.clear = function () {

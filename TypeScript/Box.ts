@@ -35,6 +35,7 @@ class Box
         var size = this.size / 2;
         var color1 = this.color;
         var color2 = color1.scale(0.75);
+        color2.w = color1.w;
 
         // front
         var v1 = new Vector4(-size, size, size);

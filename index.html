@@ -52,14 +52,14 @@ createRasterizer();
 var clearFramebuffer = true;
 
 var boxes = new Array();
-boxes.push(new Box(new Vector4(-1, -1, -1), 1, new Vector4(255, 0, 0)));
-boxes.push(new Box(new Vector4(-1, -1, 1), 1, new Vector4(0, 255, 0)));
-boxes.push(new Box(new Vector4(-1, 1, -1), 1, new Vector4(0, 0, 255)));
-boxes.push(new Box(new Vector4(-1, 1, 1), 1, new Vector4(255, 255, 255)));
-boxes.push(new Box(new Vector4(1, -1, -1), 1, new Vector4(64, 64, 64)));
-boxes.push(new Box(new Vector4(1, -1, 1), 1, new Vector4(255, 255, 0)));
-boxes.push(new Box(new Vector4(1, 1, -1), 1, new Vector4(0, 255, 255)));
-boxes.push(new Box(new Vector4(1, 1, 1), 1, new Vector4(255, 0, 255)));
+boxes.push(new Box(new Vector4(-1, -1, -1), 1, new Vector4(255, 0, 0, 255)));
+boxes.push(new Box(new Vector4(-1, -1, 1), 1, new Vector4(0, 255, 0, 255)));
+boxes.push(new Box(new Vector4(-1, 1, -1), 1, new Vector4(0, 0, 255, 255)));
+boxes.push(new Box(new Vector4(-1, 1, 1), 1, new Vector4(255, 255, 255, 255)));
+boxes.push(new Box(new Vector4(1, -1, -1), 1, new Vector4(64, 64, 64, 255)));
+boxes.push(new Box(new Vector4(1, -1, 1), 1, new Vector4(255, 255, 0, 255)));
+boxes.push(new Box(new Vector4(1, 1, -1), 1, new Vector4(0, 255, 255, 255)));
+boxes.push(new Box(new Vector4(1, 1, 1), 1, new Vector4(255, 0, 255, 255)));
 
 var r = 0.0;
 function render()
