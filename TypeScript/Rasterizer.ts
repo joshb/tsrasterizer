@@ -62,6 +62,11 @@ class Rasterizer
         // do nothing - this should be implemented by subclasses
     }
 
+    public flush():void
+    {
+        // do nothing - this should be implemented by subclasses
+    }
+
     public drawSpan(span:Span, y:number):void
     {
         var xdiff = span.x2 - span.x1;

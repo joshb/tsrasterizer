@@ -30,6 +30,7 @@ class CanvasRasterizer extends Rasterizer
     private container;
     private canvas;
     private context;
+    private imageData;
 
     private depth = [];
 
@@ -69,6 +70,9 @@ class CanvasRasterizer extends Rasterizer
         this.canvas.style.height = "100%";
         this.container.appendChild(this.canvas);
         this.context = this.canvas.getContext("2d");
+
+        if(scaled)
+            this.imageData = this.context.createImageData(this.canvas.width, this.canvas.height);
     }
 
     public getWidth():number
@@ -97,18 +101,33 @@ class CanvasRasterizer extends Rasterizer
             return;
 
         // set the color and depth of the pixel
-        this.context.fillStyle = color.toColorString();
-        if(this.scaled)
-            this.context.fillRect(x, y, 1, 1);
-        else
+        if(this.scaled) {
+            var tmp = (this.canvas.width * y + x) * 4;
+            this.imageData.data[tmp+0] = color.x;
+            this.imageData.data[tmp+1] = color.y;
+            this.imageData.data[tmp+2] = color.z;
+            this.imageData.data[tmp+3] = 255;
+        } else {
+            this.context.fillStyle = color.toColorString();
             this.context.fillRect(x * this.pixelSize, y * this.pixelSize, this.pixelSize, this.pixelSize);
+        }
         this.depth[index] = z;
     }
 
     public clear():void
     {
-        this.context.fillStyle = "black";
-        this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        if(this.scaled) {
+            this.imageData = this.context.createImageData(this.canvas.width, this.canvas.height);
+        } else {
+            this.context.fillStyle = "black";
+            this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        }
+
         this.depth = [];
+    }
+
+    public flush():void
+    {
+        this.context.putImageData(this.imageData, 0, 0);
     }
 }
