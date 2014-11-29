@@ -25,6 +25,8 @@
 
 /// <reference path="Rasterizer.ts"/>
 
+declare var asm;
+
 class CanvasRasterizer extends Rasterizer
 {
     private context;
@@ -34,9 +36,13 @@ class CanvasRasterizer extends Rasterizer
     private pixels;
     private depth;
 
+    private rgba;
+
     public constructor(container, pixelSize:number)
     {
         super();
+
+        this.rgba = asm.isLittleEndian() ? asm.rgbaLE : asm.rgbaBE;
 
         this.buildCanvas(container, pixelSize);
         this.init();
@@ -88,11 +94,7 @@ class CanvasRasterizer extends Rasterizer
         }
 
         // calculate the rgba color data
-        var r = color.x & 0xff;
-        var g = color.y & 0xff;
-        var b = color.z & 0xff;
-        var a = color.w & 0xff;
-        var c = (a << 24) | (b << 16) | (g << 8) | r;
+        var c = this.rgba(color.x, color.y, color.z, color.w);
 
         // set the color and depth of the pixel
         this.data[index] = c;

@@ -23,6 +23,9 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+declare var asm;
+declare var heapFloat64;
+
 class Vector4
 {
     public constructor(public x:number, public y:number, public z:number, public w:number = 0.0) {}
@@ -45,6 +48,12 @@ class Vector4
     public scale(f:number):Vector4
     {
         return new Vector4(this.x * f, this.y * f, this.z * f, this.w * f);
+    }
+
+    public lerp(end:Vector4, f:number):Vector4
+    {
+        asm.lerpVector(this.x, this.y, this.z, this.w, end.x, end.y, end.z, end.w, f);
+        return new Vector4(heapFloat64[0], heapFloat64[1], heapFloat64[2], heapFloat64[3]);
     }
 
     public toString():string

@@ -42,6 +42,10 @@ var Vector4 = (function () {
     Vector4.prototype.scale = function (f) {
         return new Vector4(this.x * f, this.y * f, this.z * f, this.w * f);
     };
+    Vector4.prototype.lerp = function (end, f) {
+        asm.lerpVector(this.x, this.y, this.z, this.w, end.x, end.y, end.z, end.w, f);
+        return new Vector4(heapFloat64[0], heapFloat64[1], heapFloat64[2], heapFloat64[3]);
+    };
     Vector4.prototype.toString = function () {
         return this.x + "," + this.y + "," + this.z + "," + this.w;
     };
@@ -77,10 +81,10 @@ var Vector4 = (function () {
 /// <reference path="Vector4.ts"/>
 var Edge = (function () {
     function Edge(color1, x1, y1, z1, color2, x2, y2, z2) {
-        x1 |= 0;
-        y1 |= 0;
-        x2 |= 0;
-        y2 |= 0;
+        x1 = x1 | 0;
+        y1 = y1 | 0;
+        x2 = x2 | 0;
+        y2 = y2 | 0;
         if (y1 < y2) {
             this.color1 = color1;
             this.x1 = x1;
@@ -253,8 +257,8 @@ var Matrix4 = (function () {
 /// <reference path="Vector4.ts"/>
 var Span = (function () {
     function Span(color1, x1, z1, color2, x2, z2) {
-        x1 |= 0;
-        x2 |= 0;
+        x1 = x1 | 0;
+        x2 = x2 | 0;
         if (x1 < x2) {
             this.color1 = color1;
             this.x1 = x1;
@@ -306,12 +310,12 @@ var Rasterizer = (function () {
     function Rasterizer() {
         this.width = 0;
         this.height = 0;
-        this._modelviewMatrix = null;
-        this._projectionMatrix = null;
+        this.modelviewMatrix = null;
+        this.projectionMatrix = null;
     }
     Rasterizer.prototype.init = function () {
-        this._modelviewMatrix = new Matrix4();
-        this._projectionMatrix = Matrix4.perspective(Math.PI / 2.0, this.width / this.height, Rasterizer.ZNEAR, Rasterizer.ZFAR);
+        this.modelviewMatrix = new Matrix4();
+        this.projectionMatrix = Matrix4.perspective(Math.PI / 2.0, this.width / this.height, Rasterizer.ZNEAR, Rasterizer.ZFAR);
     };
     Rasterizer.prototype.setPixel = function (x, y, z, color) {
         // do nothing - this should be implemented by subclasses
@@ -328,23 +332,17 @@ var Rasterizer = (function () {
         var xdiff = span.x2 - span.x1;
         if (xdiff == 0)
             return;
+        var factor = 0.0;
         var step = 1.0 / xdiff;
-        var color = span.color1;
-        var colorDiff = span.color2.subtract(color);
-        var colorStep = colorDiff.scale(step);
-        var z = span.z1;
-        var zdiff = span.z2 - z;
-        var zstep = zdiff * step;
         // draw pixels in the span
         var xend = span.x2 - 1;
         for (var x = span.x1; x < xend; ++x) {
-            this.setPixel(x, y, z, color);
-            color = color.add(colorStep);
-            z += zstep;
+            this.setPixel(x, y, asm.lerp(span.z1, span.z2, factor), span.color1.lerp(span.color2, factor));
+            factor += step;
         }
         // the last pixel is drawn outside of the loop to
         // avoid incrementing color and z unnecessarily
-        this.setPixel(xend, y, z, color);
+        this.setPixel(x, y, asm.lerp(span.z1, span.z2, factor), span.color1.lerp(span.color2, factor));
     };
     Rasterizer.prototype.drawSpansBetweenEdges = function (e1, e2) {
         // calculate difference between the y coordinates
@@ -357,29 +355,25 @@ var Rasterizer = (function () {
         var e2ydiff = e2.y2 - e2.y1;
         if (e2ydiff == 0)
             return;
-        // calculate differences between the x/z coordinates
-        // and colors of the points of the edges
-        var e1xdiff = e1.x2 - e1.x1;
-        var e2xdiff = e2.x2 - e2.x1;
-        var e1zdiff = e1.z2 - e1.z1;
-        var e2zdiff = e2.z2 - e2.z1;
-        var e1colordiff = e1.color2.subtract(e1.color1);
-        var e2colordiff = e2.color2.subtract(e2.color1);
         // calculate factors to use for interpolation
         // with the edges and the step values to increase
         // them by after drawing each span
         var factor1 = (e2.y1 - e1.y1) / e1ydiff;
-        var factorStep1 = 1.0 / e1ydiff;
+        var step1 = 1.0 / e1ydiff;
         var factor2 = 0.0;
-        var factorStep2 = 1.0 / e2ydiff;
-        for (var y = e2.y1; y < e2.y2; ++y) {
+        var step2 = 1.0 / e2ydiff;
+        // loop through the lines between the edges and draw spans
+        var yend = e2.y2 - 1;
+        var span;
+        for (var y = e2.y1; y < yend; ++y) {
             // create and draw span
-            var span = new Span(e1.color1.add(e1colordiff.scale(factor1)), e1.x1 + (e1xdiff * factor1), e1.z1 + (e1zdiff * factor1), e2.color1.add(e2colordiff.scale(factor2)), e2.x1 + (e2xdiff * factor2), e2.z1 + (e2zdiff * factor2));
+            span = new Span(e1.color1.lerp(e1.color2, factor1), asm.lerp(e1.x1, e1.x2, factor1), asm.lerp(e1.z1, e1.z2, factor1), e2.color1.lerp(e2.color2, factor2), asm.lerp(e2.x1, e2.x2, factor2), asm.lerp(e2.z1, e2.z2, factor2));
             this.drawSpan(span, y);
-            // increase factors
-            factor1 += factorStep1;
-            factor2 += factorStep2;
+            factor1 += step1;
+            factor2 += step2;
         }
+        span = new Span(e1.color1.lerp(e1.color2, factor1), asm.lerp(e1.x1, e1.x2, factor1), asm.lerp(e1.z1, e1.z2, factor1), e2.color1.lerp(e2.color2, factor2), asm.lerp(e2.x1, e2.x2, factor2), asm.lerp(e2.z1, e2.z2, factor2));
+        this.drawSpan(span, y);
     };
     Rasterizer.prototype.drawTriangle = function (color1, v1, color2, v2, color3, v3) {
         // creates edges for the triangle
@@ -405,7 +399,7 @@ var Rasterizer = (function () {
         this.drawSpansBetweenEdges(edges[longEdge], edges[shortEdge2]);
     };
     Rasterizer.prototype.projectVertex = function (vertex) {
-        var m = this._projectionMatrix.multiply(this._modelviewMatrix);
+        var m = this.projectionMatrix.multiply(this.modelviewMatrix);
         var v = m.transform(vertex);
         if (v.z < Rasterizer.ZNEAR)
             return null;
@@ -426,56 +420,8 @@ var Rasterizer = (function () {
         this.drawTriangle3D(color1, v1, color2, v2, color3, v3);
         this.drawTriangle3D(color3, v3, color2, v2, color4, v4);
     };
-    Rasterizer.prototype.drawLine = function (color1, x1, y1, color2, x2, y2) {
-        var xdiff = x2 - x1;
-        var ydiff = y2 - y1;
-        if (xdiff == 0 && ydiff == 0) {
-            this.setPixel(x1, y1, 0.0, color1);
-            return;
-        }
-        if (Math.abs(xdiff) > Math.abs(ydiff)) {
-            var xmin, xmax;
-            // set xmin to the lower x value given
-            // and xmax to the higher value
-            if (x1 < x2) {
-                xmin = x1;
-                xmax = x2;
-            }
-            else {
-                xmin = x2;
-                xmax = x1;
-            }
-            // draw line in terms of y slope
-            var slope = ydiff / xdiff;
-            for (var x = xmin; x <= xmax; ++x) {
-                var y = y1 + ((x - x1) * slope);
-                var color = color1.add(color2.subtract(color1).scale((x - x1) / xdiff));
-                this.setPixel(x, y, 0.0, color);
-            }
-        }
-        else {
-            var ymin, ymax;
-            // set ymin to the lower y value given
-            // and ymax to the higher value
-            if (y1 < y2) {
-                ymin = y1;
-                ymax = y2;
-            }
-            else {
-                ymin = y2;
-                ymax = y1;
-            }
-            // draw line in terms of x slope
-            var slope = xdiff / ydiff;
-            for (var y = ymin; y <= ymax; ++y) {
-                var x = x1 + ((y - y1) * slope);
-                var color = color1.add(color2.subtract(color1).scale((y - y1) / ydiff));
-                this.setPixel(x, y, 0.0, color);
-            }
-        }
-    };
     Rasterizer.prototype.setModelviewMatrix = function (m) {
-        this._modelviewMatrix = m;
+        this.modelviewMatrix = m;
     };
     Rasterizer.ZNEAR = 0.1;
     Rasterizer.ZFAR = 2000.0;
@@ -592,6 +538,7 @@ var CanvasRasterizer = (function (_super) {
     __extends(CanvasRasterizer, _super);
     function CanvasRasterizer(container, pixelSize) {
         _super.call(this);
+        this.rgba = asm.isLittleEndian() ? asm.rgbaLE : asm.rgbaBE;
         this.buildCanvas(container, pixelSize);
         this.init();
     }
@@ -630,11 +577,7 @@ var CanvasRasterizer = (function (_super) {
             color = color.scale(fa).add(oldColor.scale(1.0 - fa));
         }
         // calculate the rgba color data
-        var r = color.x & 0xff;
-        var g = color.y & 0xff;
-        var b = color.z & 0xff;
-        var a = color.w & 0xff;
-        var c = (a << 24) | (b << 16) | (g << 8) | r;
+        var c = this.rgba(color.x, color.y, color.z, color.w);
         // set the color and depth of the pixel
         this.data[index] = c;
         this.pixels[index] = color;

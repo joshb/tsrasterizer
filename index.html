@@ -4,6 +4,7 @@
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <title>rasterizer</title>
 <link rel="stylesheet" type="text/css" href="Styles/Rasterizer.css" />
+<script src="JavaScript/RasterizerAsm.js"></script>
 <script src="JavaScript/tsrasterizer.js"></script>
 </head>
 <body>
@@ -45,6 +46,10 @@
 </p>
 
 <script>
+var heap = new ArrayBuffer(0x1000);
+var heapFloat64 = new Float64Array(heap);
+var asm = RasterizerAsm(window, null, heap);
+
 var rast = null;
 createRasterizer();
 

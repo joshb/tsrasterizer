@@ -36,13 +36,13 @@ class Rasterizer
     protected width:number = 0;
     protected height:number = 0;
 
-    private _modelviewMatrix:Matrix4 = null;
-    private _projectionMatrix:Matrix4 = null;
+    private modelviewMatrix:Matrix4 = null;
+    private projectionMatrix:Matrix4 = null;
 
     protected init():void
     {
-        this._modelviewMatrix = new Matrix4();
-        this._projectionMatrix = Matrix4.perspective(Math.PI / 2.0, this.width / this.height, Rasterizer.ZNEAR, Rasterizer.ZFAR);
+        this.modelviewMatrix = new Matrix4();
+        this.projectionMatrix = Matrix4.perspective(Math.PI / 2.0, this.width / this.height, Rasterizer.ZNEAR, Rasterizer.ZFAR);
     }
 
     public setPixel(x:number, y:number, z:number, color:Vector4):void
@@ -69,27 +69,19 @@ class Rasterizer
         if(xdiff == 0)
             return;
 
+        var factor = 0.0;
         var step = 1.0 / xdiff;
-
-        var color = span.color1;
-        var colorDiff = span.color2.subtract(color);
-        var colorStep = colorDiff.scale(step);
-
-        var z = span.z1;
-        var zdiff = span.z2 - z;
-        var zstep = zdiff * step;
 
         // draw pixels in the span
         var xend = span.x2 - 1;
         for(var x = span.x1; x < xend; ++x) {
-            this.setPixel(x, y, z, color);
-            color = color.add(colorStep);
-            z += zstep;
+            this.setPixel(x, y, asm.lerp(span.z1, span.z2, factor), span.color1.lerp(span.color2, factor));
+            factor += step;
         }
 
         // the last pixel is drawn outside of the loop to
         // avoid incrementing color and z unnecessarily
-        this.setPixel(xend, y, z, color);
+        this.setPixel(x, y, asm.lerp(span.z1, span.z2, factor), span.color1.lerp(span.color2, factor));
     }
 
     public drawSpansBetweenEdges(e1:Edge, e2:Edge):void
@@ -106,38 +98,37 @@ class Rasterizer
         if(e2ydiff == 0)
             return;
 
-        // calculate differences between the x/z coordinates
-        // and colors of the points of the edges
-        var e1xdiff = e1.x2 - e1.x1;
-        var e2xdiff = e2.x2 - e2.x1;
-        var e1zdiff = e1.z2 - e1.z1;
-        var e2zdiff = e2.z2 - e2.z1;
-        var e1colordiff = e1.color2.subtract(e1.color1);
-        var e2colordiff = e2.color2.subtract(e2.color1);
-
         // calculate factors to use for interpolation
         // with the edges and the step values to increase
         // them by after drawing each span
         var factor1 = (e2.y1 - e1.y1) / e1ydiff;
-        var factorStep1 = 1.0 / e1ydiff;
+        var step1 = 1.0 / e1ydiff;
         var factor2 = 0.0;
-        var factorStep2 = 1.0 / e2ydiff;
+        var step2 = 1.0 / e2ydiff;
 
         // loop through the lines between the edges and draw spans
-        for(var y = e2.y1; y < e2.y2; ++y) {
+        var yend = e2.y2 - 1;
+        var span:Span;
+        for(var y = e2.y1; y < yend; ++y) {
             // create and draw span
-            var span = new Span(e1.color1.add(e1colordiff.scale(factor1)),
-                                e1.x1 + (e1xdiff * factor1),
-                                e1.z1 + (e1zdiff * factor1),
-                                e2.color1.add(e2colordiff.scale(factor2)),
-                                e2.x1 + (e2xdiff * factor2),
-                                e2.z1 + (e2zdiff * factor2));
+            span = new Span(e1.color1.lerp(e1.color2, factor1),
+                            asm.lerp(e1.x1, e1.x2, factor1),
+                            asm.lerp(e1.z1, e1.z2, factor1),
+                            e2.color1.lerp(e2.color2, factor2),
+                            asm.lerp(e2.x1, e2.x2, factor2),
+                            asm.lerp(e2.z1, e2.z2, factor2));
             this.drawSpan(span, y);
-
-            // increase factors
-            factor1 += factorStep1;
-            factor2 += factorStep2;
+            factor1 += step1;
+            factor2 += step2;
         }
+
+        span = new Span(e1.color1.lerp(e1.color2, factor1),
+                        asm.lerp(e1.x1, e1.x2, factor1),
+                        asm.lerp(e1.z1, e1.z2, factor1),
+                        e2.color1.lerp(e2.color2, factor2),
+                        asm.lerp(e2.x1, e2.x2, factor2),
+                        asm.lerp(e2.z1, e2.z2, factor2));
+        this.drawSpan(span, y);
     }
 
     public drawTriangle(color1:Vector4, v1:Vector4, color2:Vector4, v2:Vector4, color3:Vector4, v3:Vector4):void
@@ -172,7 +163,7 @@ class Rasterizer
 
     public projectVertex(vertex:Vector4):Vector4
     {
-        var m = this._projectionMatrix.multiply(this._modelviewMatrix);
+        var m = this.projectionMatrix.multiply(this.modelviewMatrix);
         var v = m.transform(vertex);
         if(v.z < Rasterizer.ZNEAR)
             return null;
@@ -202,61 +193,8 @@ class Rasterizer
         this.drawTriangle3D(color3, v3, color2, v2, color4, v4);
     }
 
-    public drawLine(color1:Vector4, x1:number, y1:number, color2:Vector4, x2:number, y2:number)
-    {
-        var xdiff = x2 - x1;
-        var ydiff = y2 - y1;
-
-        if(xdiff == 0 && ydiff == 0) {
-            this.setPixel(x1, y1, 0.0, color1);
-            return;
-        }
-
-        if(Math.abs(xdiff) > Math.abs(ydiff)) {
-            var xmin, xmax;
-
-            // set xmin to the lower x value given
-            // and xmax to the higher value
-            if(x1 < x2) {
-                xmin = x1;
-                xmax = x2;
-            } else {
-                xmin = x2;
-                xmax = x1;
-            }
-
-            // draw line in terms of y slope
-            var slope = ydiff / xdiff;
-            for(var x:number = xmin; x <= xmax; ++x) {
-                var y = y1 + ((x - x1) * slope);
-                var color = color1.add(color2.subtract(color1).scale((x - x1) / xdiff));
-                this.setPixel(x, y, 0.0, color);
-            }
-        } else {
-            var ymin, ymax;
-
-            // set ymin to the lower y value given
-            // and ymax to the higher value
-            if(y1 < y2) {
-                ymin = y1;
-                ymax = y2;
-            } else {
-                ymin = y2;
-                ymax = y1;
-            }
-
-            // draw line in terms of x slope
-            var slope = xdiff / ydiff;
-            for(var y:number = ymin; y <= ymax; ++y) {
-                var x = x1 + ((y - y1) * slope);
-                var color = color1.add(color2.subtract(color1).scale((y - y1) / ydiff));
-                this.setPixel(x, y, 0.0, color);
-            }
-        }
-    }
-
     public setModelviewMatrix(m:Matrix4):void
     {
-        this._modelviewMatrix = m;
+        this.modelviewMatrix = m;
     }
 }
