@@ -31,8 +31,7 @@ class CanvasRasterizer extends Rasterizer
     private canvas;
     private context;
 
-    private pixels = null;
-    private depth = null;
+    private depth = [];
 
     private width:number = 0;
     private height:number = 0;
@@ -70,11 +69,6 @@ class CanvasRasterizer extends Rasterizer
         this.canvas.style.height = "100%";
         this.container.appendChild(this.canvas);
         this.context = this.canvas.getContext("2d");
-
-        // create depth buffer
-        this.depth = [];
-        for(var i = 0; i < this.width * this.height; ++i)
-            this.depth.push(1.0);
     }
 
     public getWidth():number
@@ -99,7 +93,7 @@ class CanvasRasterizer extends Rasterizer
         // make sure the depth isn't greater than
         // the depth of the currently stored pixel
         var index = Math.floor(this.width * y + x);
-        if(z > this.depth[index])
+        if(index < this.depth.length && z > this.depth[index])
             return;
 
         // set the color and depth of the pixel
@@ -115,8 +109,6 @@ class CanvasRasterizer extends Rasterizer
     {
         this.context.fillStyle = "black";
         this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
-
-        for(var i = 0; i < this.depth.length; ++i)
-            this.depth[i] = 1.0;
+        this.depth = [];
     }
 }

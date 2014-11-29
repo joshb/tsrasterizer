@@ -29,8 +29,8 @@ class DivRasterizer extends Rasterizer
 {
     private container;
 
-    private pixels = null;
-    private depth = null;
+    private pixels = [];
+    private depth = [];
 
     private width:number = 0;
     private height:number = 0;
@@ -51,8 +51,6 @@ class DivRasterizer extends Rasterizer
         while(this.container.hasChildNodes())
             this.container.removeChild(this.container.firstChild);
 
-        this.pixels = [];
-
         // create divs representing the pixels
         this.width = Math.floor(this.container.offsetWidth / pixelSize) + 1;
         this.height = Math.floor(this.container.offsetHeight / pixelSize) + 1;
@@ -68,11 +66,6 @@ class DivRasterizer extends Rasterizer
                 this.pixels.push(pixel);
             }
         }
-
-        // create depth buffer
-        this.depth = [];
-        for(var i = 0; i < this.width * this.height; ++i)
-            this.depth.push(1.0);
     }
 
     public getWidth():number
@@ -97,7 +90,7 @@ class DivRasterizer extends Rasterizer
         // make sure the depth isn't greater than
         // the depth of the currently stored pixel
         var index = Math.floor(this.width * y + x);
-        if(z > this.depth[index])
+        if(index < this.depth.length && z > this.depth[index])
             return;
 
         // set the color and depth of the pixel
@@ -107,9 +100,8 @@ class DivRasterizer extends Rasterizer
 
     public clear():void
     {
-        for(var i = 0; i < this.pixels.length; ++i) {
+        for(var i = 0; i < this.pixels.length; ++i)
             this.pixels[i].style.backgroundColor = "transparent";
-            this.depth[i] = 1.0;
-        }
+        this.depth = [];
     }
 }

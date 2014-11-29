@@ -581,8 +581,7 @@ var CanvasRasterizer = (function (_super) {
     __extends(CanvasRasterizer, _super);
     function CanvasRasterizer(container, pixelSize, scaled) {
         _super.call(this);
-        this.pixels = null;
-        this.depth = null;
+        this.depth = [];
         this.width = 0;
         this.height = 0;
         this.pixelSize = 0;
@@ -608,10 +607,6 @@ var CanvasRasterizer = (function (_super) {
         this.canvas.style.height = "100%";
         this.container.appendChild(this.canvas);
         this.context = this.canvas.getContext("2d");
-        // create depth buffer
-        this.depth = [];
-        for (var i = 0; i < this.width * this.height; ++i)
-            this.depth.push(1.0);
     };
     CanvasRasterizer.prototype.getWidth = function () {
         return this.width;
@@ -628,7 +623,7 @@ var CanvasRasterizer = (function (_super) {
         // make sure the depth isn't greater than
         // the depth of the currently stored pixel
         var index = Math.floor(this.width * y + x);
-        if (z > this.depth[index])
+        if (index < this.depth.length && z > this.depth[index])
             return;
         // set the color and depth of the pixel
         this.context.fillStyle = color.toColorString();
@@ -641,8 +636,7 @@ var CanvasRasterizer = (function (_super) {
     CanvasRasterizer.prototype.clear = function () {
         this.context.fillStyle = "black";
         this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
-        for (var i = 0; i < this.depth.length; ++i)
-            this.depth[i] = 1.0;
+        this.depth = [];
     };
     return CanvasRasterizer;
 })(Rasterizer);
@@ -675,8 +669,8 @@ var DivRasterizer = (function (_super) {
     __extends(DivRasterizer, _super);
     function DivRasterizer(container, pixelSize) {
         _super.call(this);
-        this.pixels = null;
-        this.depth = null;
+        this.pixels = [];
+        this.depth = [];
         this.width = 0;
         this.height = 0;
         this.container = container;
@@ -686,7 +680,6 @@ var DivRasterizer = (function (_super) {
     DivRasterizer.prototype.buildPixels = function (pixelSize) {
         while (this.container.hasChildNodes())
             this.container.removeChild(this.container.firstChild);
-        this.pixels = [];
         // create divs representing the pixels
         this.width = Math.floor(this.container.offsetWidth / pixelSize) + 1;
         this.height = Math.floor(this.container.offsetHeight / pixelSize) + 1;
@@ -702,10 +695,6 @@ var DivRasterizer = (function (_super) {
                 this.pixels.push(pixel);
             }
         }
-        // create depth buffer
-        this.depth = [];
-        for (var i = 0; i < this.width * this.height; ++i)
-            this.depth.push(1.0);
     };
     DivRasterizer.prototype.getWidth = function () {
         return this.width;
@@ -722,17 +711,16 @@ var DivRasterizer = (function (_super) {
         // make sure the depth isn't greater than
         // the depth of the currently stored pixel
         var index = Math.floor(this.width * y + x);
-        if (z > this.depth[index])
+        if (index < this.depth.length && z > this.depth[index])
             return;
         // set the color and depth of the pixel
         this.pixels[index].style.backgroundColor = color.toColorString();
         this.depth[index] = z;
     };
     DivRasterizer.prototype.clear = function () {
-        for (var i = 0; i < this.pixels.length; ++i) {
+        for (var i = 0; i < this.pixels.length; ++i)
             this.pixels[i].style.backgroundColor = "transparent";
-            this.depth[i] = 1.0;
-        }
+        this.depth = [];
     };
     return DivRasterizer;
 })(Rasterizer);
