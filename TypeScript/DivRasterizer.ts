@@ -32,9 +32,6 @@ class DivRasterizer extends Rasterizer
     private pixels = [];
     private depth = [];
 
-    private width:number = 0;
-    private height:number = 0;
-
     public constructor(container, pixelSize:number)
     {
         super();
@@ -66,16 +63,6 @@ class DivRasterizer extends Rasterizer
                 this.pixels.push(pixel);
             }
         }
-    }
-
-    public getWidth():number
-    {
-        return this.width;
-    }
-
-    public getHeight():number
-    {
-        return this.height;
     }
 
     public setPixel(x:number, y:number, z:number, color:Vector4):void

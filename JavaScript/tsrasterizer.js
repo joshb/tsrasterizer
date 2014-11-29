@@ -77,10 +77,10 @@ var Vector4 = (function () {
 /// <reference path="Vector4.ts"/>
 var Edge = (function () {
     function Edge(color1, x1, y1, z1, color2, x2, y2, z2) {
-        x1 = Math.floor(x1);
-        y1 = Math.floor(y1);
-        x2 = Math.floor(x2);
-        y2 = Math.floor(y2);
+        x1 |= 0;
+        y1 |= 0;
+        x2 |= 0;
+        y2 |= 0;
         if (y1 < y2) {
             this.color1 = color1;
             this.x1 = x1;
@@ -253,8 +253,8 @@ var Matrix4 = (function () {
 /// <reference path="Vector4.ts"/>
 var Span = (function () {
     function Span(color1, x1, z1, color2, x2, z2) {
-        x1 = Math.floor(x1);
-        x2 = Math.floor(x2);
+        x1 |= 0;
+        x2 |= 0;
         if (x1 < x2) {
             this.color1 = color1;
             this.x1 = x1;
@@ -304,18 +304,14 @@ var Span = (function () {
 /// <reference path="Span.ts"/>
 var Rasterizer = (function () {
     function Rasterizer() {
+        this.width = 0;
+        this.height = 0;
         this._modelviewMatrix = null;
         this._projectionMatrix = null;
     }
     Rasterizer.prototype.init = function () {
         this._modelviewMatrix = new Matrix4();
-        this._projectionMatrix = Matrix4.perspective(Math.PI / 2.0, this.getWidth() / this.getHeight(), Rasterizer.ZNEAR, Rasterizer.ZFAR);
-    };
-    Rasterizer.prototype.getWidth = function () {
-        return 0;
-    };
-    Rasterizer.prototype.getHeight = function () {
-        return 0;
+        this._projectionMatrix = Matrix4.perspective(Math.PI / 2.0, this.width / this.height, Rasterizer.ZNEAR, Rasterizer.ZFAR);
     };
     Rasterizer.prototype.setPixel = function (x, y, z, color) {
         // do nothing - this should be implemented by subclasses
@@ -327,6 +323,8 @@ var Rasterizer = (function () {
         // do nothing - this should be implemented by subclasses
     };
     Rasterizer.prototype.drawSpan = function (span, y) {
+        if (y < 0 || y >= this.height)
+            return;
         var xdiff = span.x2 - span.x1;
         if (xdiff == 0)
             return;
@@ -403,8 +401,8 @@ var Rasterizer = (function () {
         if (v.z < Rasterizer.ZNEAR)
             return null;
         v = v.scale(1.0 / v.w);
-        var cx = Math.floor(this.getWidth() / 2);
-        var cy = Math.floor(this.getHeight() / 2);
+        var cx = (this.width / 2) | 0;
+        var cy = (this.height / 2) | 0;
         return new Vector4(cx + cx * v.x, cy - cy * v.y, v.z / Rasterizer.ZFAR, v.w);
     };
     Rasterizer.prototype.drawTriangle3D = function (color1, v1, color2, v2, color3, v3) {
@@ -585,8 +583,6 @@ var CanvasRasterizer = (function (_super) {
     function CanvasRasterizer(container, pixelSize, scaled) {
         _super.call(this);
         this.depth = [];
-        this.width = 0;
-        this.height = 0;
         this.pixelSize = 0;
         this.scaled = false;
         this.container = container;
@@ -610,33 +606,25 @@ var CanvasRasterizer = (function (_super) {
         this.canvas.style.height = "100%";
         this.container.appendChild(this.canvas);
         this.context = this.canvas.getContext("2d");
-        if (scaled)
-            this.imageData = this.context.createImageData(this.canvas.width, this.canvas.height);
-    };
-    CanvasRasterizer.prototype.getWidth = function () {
-        return this.width;
-    };
-    CanvasRasterizer.prototype.getHeight = function () {
-        return this.height;
+        this.clear();
     };
     CanvasRasterizer.prototype.setPixel = function (x, y, z, color) {
-        x = Math.floor(x);
-        y = Math.floor(y);
+        x |= 0;
+        y |= 0;
         // make sure the x/y coordinates are valid
         if (x < 0 || x >= this.width || y < 0 || y >= this.height)
             return;
         // make sure the depth isn't greater than
         // the depth of the currently stored pixel
-        var index = Math.floor(this.width * y + x);
+        var index = this.width * y + x;
         if (index < this.depth.length && z > this.depth[index])
             return;
         // set the color and depth of the pixel
         if (this.scaled) {
-            var tmp = (this.canvas.width * y + x) * 4;
-            this.imageData.data[tmp + 0] = color.x;
-            this.imageData.data[tmp + 1] = color.y;
-            this.imageData.data[tmp + 2] = color.z;
-            this.imageData.data[tmp + 3] = 255;
+            var r = color.x & 0xff;
+            var g = color.y & 0xff;
+            var b = color.z & 0xff;
+            this.data[index] = (255 << 24) | (b << 16) | (g << 8) | r;
         }
         else {
             this.context.fillStyle = color.toColorString();
@@ -647,6 +635,7 @@ var CanvasRasterizer = (function (_super) {
     CanvasRasterizer.prototype.clear = function () {
         if (this.scaled) {
             this.imageData = this.context.createImageData(this.canvas.width, this.canvas.height);
+            this.data = new Uint32Array(this.imageData.data.buffer);
         }
         else {
             this.context.fillStyle = "black";
@@ -690,8 +679,6 @@ var DivRasterizer = (function (_super) {
         _super.call(this);
         this.pixels = [];
         this.depth = [];
-        this.width = 0;
-        this.height = 0;
         this.container = container;
         this.buildPixels(pixelSize);
         this.init();
@@ -714,12 +701,6 @@ var DivRasterizer = (function (_super) {
                 this.pixels.push(pixel);
             }
         }
-    };
-    DivRasterizer.prototype.getWidth = function () {
-        return this.width;
-    };
-    DivRasterizer.prototype.getHeight = function () {
-        return this.height;
     };
     DivRasterizer.prototype.setPixel = function (x, y, z, color) {
         x = Math.floor(x);

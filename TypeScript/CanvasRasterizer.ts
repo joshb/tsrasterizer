@@ -31,11 +31,10 @@ class CanvasRasterizer extends Rasterizer
     private canvas;
     private context;
     private imageData;
+    private data;
 
     private depth = [];
 
-    private width:number = 0;
-    private height:number = 0;
     private pixelSize:number = 0;
     private scaled:boolean = false;
 
@@ -71,24 +70,13 @@ class CanvasRasterizer extends Rasterizer
         this.container.appendChild(this.canvas);
         this.context = this.canvas.getContext("2d");
 
-        if(scaled)
-            this.imageData = this.context.createImageData(this.canvas.width, this.canvas.height);
-    }
-
-    public getWidth():number
-    {
-        return this.width;
-    }
-
-    public getHeight():number
-    {
-        return this.height;
+        this.clear();
     }
 
     public setPixel(x:number, y:number, z:number, color:Vector4):void
     {
-        x = Math.floor(x);
-        y = Math.floor(y);
+        x |= 0;
+        y |= 0;
 
         // make sure the x/y coordinates are valid
         if(x < 0 || x >= this.width || y < 0 || y >= this.height)
@@ -96,17 +84,17 @@ class CanvasRasterizer extends Rasterizer
 
         // make sure the depth isn't greater than
         // the depth of the currently stored pixel
-        var index = Math.floor(this.width * y + x);
+        var index = this.width * y + x;
         if(index < this.depth.length && z > this.depth[index])
             return;
 
         // set the color and depth of the pixel
         if(this.scaled) {
-            var tmp = (this.canvas.width * y + x) * 4;
-            this.imageData.data[tmp+0] = color.x;
-            this.imageData.data[tmp+1] = color.y;
-            this.imageData.data[tmp+2] = color.z;
-            this.imageData.data[tmp+3] = 255;
+            var r = color.x & 0xff;
+            var g = color.y & 0xff;
+            var b = color.z & 0xff;
+
+            this.data[index] = (255 << 24) | (b << 16) | (g << 8) | r;
         } else {
             this.context.fillStyle = color.toColorString();
             this.context.fillRect(x * this.pixelSize, y * this.pixelSize, this.pixelSize, this.pixelSize);
@@ -118,6 +106,7 @@ class CanvasRasterizer extends Rasterizer
     {
         if(this.scaled) {
             this.imageData = this.context.createImageData(this.canvas.width, this.canvas.height);
+            this.data = new Uint32Array(this.imageData.data.buffer);
         } else {
             this.context.fillStyle = "black";
             this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);

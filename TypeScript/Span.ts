@@ -37,8 +37,8 @@ class Span
 
     public constructor(color1:Vector4, x1:number, z1:number, color2:Vector4, x2:number, z2:number)
     {
-        x1 = Math.floor(x1);
-        x2 = Math.floor(x2);
+        x1 |= 0;
+        x2 |= 0;
 
         if(x1 < x2) {
             this.color1 = color1;

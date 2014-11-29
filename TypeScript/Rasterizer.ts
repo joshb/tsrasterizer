@@ -33,23 +33,16 @@ class Rasterizer
     public static ZNEAR = 0.1;
     public static ZFAR = 2000.0;
 
+    protected width:number = 0;
+    protected height:number = 0;
+
     private _modelviewMatrix:Matrix4 = null;
     private _projectionMatrix:Matrix4 = null;
 
     protected init():void
     {
         this._modelviewMatrix = new Matrix4();
-        this._projectionMatrix = Matrix4.perspective(Math.PI / 2.0, this.getWidth() / this.getHeight(), Rasterizer.ZNEAR, Rasterizer.ZFAR);
-    }
-
-    public getWidth():number
-    {
-        return 0;
-    }
-
-    public getHeight():number
-    {
-        return 0;
+        this._projectionMatrix = Matrix4.perspective(Math.PI / 2.0, this.width / this.height, Rasterizer.ZNEAR, Rasterizer.ZFAR);
     }
 
     public setPixel(x:number, y:number, z:number, color:Vector4):void
@@ -69,6 +62,9 @@ class Rasterizer
 
     public drawSpan(span:Span, y:number):void
     {
+        if(y < 0 || y >= this.height)
+            return;
+
         var xdiff = span.x2 - span.x1;
         if(xdiff == 0)
             return;
@@ -173,8 +169,8 @@ class Rasterizer
 
         v = v.scale(1.0 / v.w);
 
-        var cx = Math.floor(this.getWidth() / 2);
-        var cy = Math.floor(this.getHeight() / 2);
+        var cx = (this.width / 2) | 0;
+        var cy = (this.height / 2) | 0;
         return new Vector4(cx + cx * v.x, cy - cy * v.y, v.z / Rasterizer.ZFAR, v.w);
     }
 
