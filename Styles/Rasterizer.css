@@ -24,12 +24,12 @@ body
     height: 100%;
 }
 
-div.pixel
+h1
 {
     display: block;
-    position: absolute;
-    background-color: transparent;
-    color: inherit;
+    position: relative;
+    margin: 0;
+    padding: 0.5em;
 }
 
 a:link, a:visited, a:active
@@ -40,7 +40,7 @@ a:link, a:visited, a:active
     padding-left: 16px;
     background-color: transparent;
     color: inherit;
-    font-size: 16pt;
+    font-size: 12pt;
     text-decoration: none;
     -webkit-transition: padding-left 0.25s, font-size 0.1s;
     -moz-transition: padding-left 0.25s, font-size 0.1s;
