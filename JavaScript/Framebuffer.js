@@ -71,6 +71,23 @@ function Framebuffer(stdlib, foreign, heap)
         return ((a << 24) | (b << 16) | (g << 8) | r)|0;
     }
 
+    function rgba(littleEndian, r, g, b, a)
+    {
+        littleEndian = littleEndian|0;
+        r = +r;
+        g = +g;
+        b = +b;
+        a = +a;
+
+        var c = 0;
+        if((littleEndian|0) == 1)
+            c = rgbaLE(~~r|0, ~~g|0, ~~b|0, ~~a|0)|0;
+        else
+            c = rgbaBE(~~r|0, ~~g|0, ~~b|0, ~~a|0)|0;
+
+        return c|0;
+    }
+
     function setPixel(width, height, x, y, z, c)
     {
         width = width|0;
@@ -111,35 +128,48 @@ function Framebuffer(stdlib, foreign, heap)
         heapFloat64[depthIndex >> 3] = z;
     }
 
-    function drawSpan(littleEndian, framebufferWidth, framebufferHeight, factor, step, y,
+    function drawSpan(littleEndian, framebufferWidth, framebufferHeight, y,
                       x1, z1, r1, g1, b1, a1, x2, z2, r2, g2, b2, a2)
     {
         littleEndian = littleEndian|0;
         framebufferWidth = framebufferWidth|0;
         framebufferHeight = framebufferHeight|0;
-        factor = +factor; step = +step; y = y|0;
+        y = y|0;
         x1 = x1|0; z1 = +z1; r1 = +r1; g1 = +g1; b1 = +b1; a1 = +a1;
         x2 = x2|0; z2 = +z2; r2 = +r2; g2 = +g2; b2 = +b2; a2 = +a2;
 
         var x = 0; var z = 0.0;
-        var r = 0; var g = 0; var b = 0; var a = 0; var c = 0;
+        var r = 0.0; var g = 0.0; var b = 0.0; var a = 0.0; var c = 0;
+
+        var diff = 0.0;
+        var zstep = 0.0;
+        var rstep = 0.0;
+        var gstep = 0.0;
+        var bstep = 0.0;
+        var astep = 0.0;
+
+        diff = +((+(x2|0)) - (+(x1|0)));
+        zstep = (z2 - z1) / diff;
+        rstep = (r2 - r1) / diff;
+        gstep = (g2 - g1) / diff;
+        bstep = (b2 - b1) / diff;
+        astep = (a2 - a1) / diff;
 
         x = x1;
+        z = z1;
+        r = r1;
+        g = g1;
+        b = b1;
+        a = a1;
         while((x|0) < (x2|0)) {
-            z = +lerp(z1, z2, factor);
-            r = lerpInt(r1, r2, factor)|0;
-            g = lerpInt(g1, g2, factor)|0;
-            b = lerpInt(b1, b2, factor)|0;
-            a = lerpInt(a1, a2, factor)|0;
-
-            if(littleEndian|0 == 1)
-                c = rgbaLE(r, g, b, a)|0;
-            else
-                c = rgbaBE(r, g, b, a)|0;
-
+            c = rgba(littleEndian, r, g, b, a)|0;
             setPixel(framebufferWidth, framebufferHeight, x, y, z, c);
 
-            factor = factor + step;
+            z = z + zstep;
+            r = r + rstep;
+            g = g + gstep;
+            b = b + bstep;
+            a = a + astep;
             x = x + 1|0;
         }
     }
@@ -149,6 +179,7 @@ function Framebuffer(stdlib, foreign, heap)
         lerpInt: lerpInt,
         rgbaBE: rgbaBE,
         rgbaLE: rgbaLE,
+        rgba: rgba,
         setPixel: setPixel,
         drawSpan: drawSpan
     };

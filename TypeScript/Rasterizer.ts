@@ -121,10 +121,7 @@ class Rasterizer
         if(xdiff == 0)
             return;
 
-        var factor = 0.0;
-        var step = 1.0 / xdiff;
-
-        this.framebuffer.drawSpan(this.littleEndian, this.width, this.height, factor, step, y,
+        this.framebuffer.drawSpan(this.littleEndian, this.width, this.height, y,
                                   span.x1, 1.0 - span.z1, span.color1.x, span.color1.y, span.color1.z, span.color1.w,
                                   span.x2, 1.0 - span.z2, span.color2.x, span.color2.y, span.color2.z, span.color2.w);
     }
