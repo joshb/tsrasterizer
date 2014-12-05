@@ -48,9 +48,9 @@ class Rasterizer
     private modelviewMatrix:Matrix4 = null;
     private projectionMatrix:Matrix4 = null;
 
-    constructor(container, pixelSize:number)
+    constructor(canvas, pixelSize:number)
     {
-        this.buildCanvas(container, pixelSize);
+        this.buildCanvas(canvas, pixelSize);
         this.init();
 
         // determine the endianness to use when writing pixel data
@@ -62,26 +62,16 @@ class Rasterizer
         this.littleEndian = buf16[0] & 0xff;
     }
 
-    private buildCanvas(container, pixelSize:number):void
+    private buildCanvas(canvas, pixelSize:number):void
     {
-        // remove existing canvas
-        while(container.hasChildNodes())
-            container.removeChild(container.firstChild);
+        this.width = Math.floor(canvas.offsetWidth / pixelSize) + 1;
+        this.height = Math.floor(canvas.offsetHeight / pixelSize) + 1;
 
-        this.width = Math.floor(container.offsetWidth / pixelSize) + 1;
-        this.height = Math.floor(container.offsetHeight / pixelSize) + 1;
-
-        // create the canvas
-        var canvas = document.createElement("canvas");
         canvas.width = this.width;
         canvas.height = this.height;
-        canvas.style.left = "0px";
-        canvas.style.top = "0px";
-        canvas.style.width = "100%";
-        canvas.style.height = "100%";
-        container.appendChild(canvas);
-
         this.context = canvas.getContext("2d");
+        this.context.fillStyle = "white";
+        this.context.font = "16pt Arial";
         this.clear();
     }
 
@@ -106,10 +96,13 @@ class Rasterizer
         this.framebuffer = new Framebuffer(window, null, heap);
     }
 
-    public flush():void
+    public flush(timeElapsed:number):void
     {
         this.imageData.data.set(this.heapView);
         this.context.putImageData(this.imageData, 0, 0);
+
+        var fps = (1.0 / timeElapsed).toFixed(1);
+        this.context.fillText(fps + " fps", 10, 30);
     }
 
     public drawSpan(span:Span, y:number):void
@@ -219,14 +212,18 @@ class Rasterizer
 
     public drawTriangle3D(color1:Vector4, v1:Vector4, color2:Vector4, v2:Vector4, color3:Vector4, v3:Vector4):void
     {
-        v1 = this.projectVertex(new Vector4(v1.x, v1.y, v1.z, 1.0));
-        v2 = this.projectVertex(new Vector4(v2.x, v2.y, v2.z, 1.0));
-        v3 = this.projectVertex(new Vector4(v3.x, v3.y, v3.z, 1.0));
+        v1 = new Vector4(v1.x, v1.y, v1.z, 1.0);
+        v2 = new Vector4(v2.x, v2.y, v2.z, 1.0);
+        v3 = new Vector4(v3.x, v3.y, v3.z, 1.0);
 
-        if(v1 == null || v2 == null || v3 == null)
+        var pv1 = this.projectVertex(v1);
+        var pv2 = this.projectVertex(v2);
+        var pv3 = this.projectVertex(v3);
+
+        if(pv1 == null || pv2 == null || pv3 == null)
             return;
 
-        this.drawTriangle(color1, v1, color2, v2, color3, v3);
+        this.drawTriangle(color1, pv1, color2, pv2, color3, pv3);
     }
 
     public drawQuad3D(color1:Vector4, v1:Vector4, color2:Vector4, v2:Vector4, color3:Vector4, v3:Vector4, color4:Vector4, v4:Vector4):void

@@ -34,7 +34,7 @@ class Box
         var position = this.position;
         var size = this.size / 2;
         var color1 = this.color;
-        var color2 = color1.scale(0.75);
+        var color2 = color1.scale(0.5);
         color2.w = color1.w;
 
         // front

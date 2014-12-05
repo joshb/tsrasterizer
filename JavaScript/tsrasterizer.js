@@ -306,14 +306,14 @@ var Span = (function () {
 /// <reference path="Vector4.ts"/>
 /// <reference path="Span.ts"/>
 var Rasterizer = (function () {
-    function Rasterizer(container, pixelSize) {
+    function Rasterizer(canvas, pixelSize) {
         this.littleEndian = 0;
         this.width = 0;
         this.height = 0;
         this.heapSize = 0;
         this.modelviewMatrix = null;
         this.projectionMatrix = null;
-        this.buildCanvas(container, pixelSize);
+        this.buildCanvas(canvas, pixelSize);
         this.init();
         // determine the endianness to use when writing pixel data
         var buf = new ArrayBuffer(2);
@@ -323,21 +323,14 @@ var Rasterizer = (function () {
         buf8[1] = 0;
         this.littleEndian = buf16[0] & 0xff;
     }
-    Rasterizer.prototype.buildCanvas = function (container, pixelSize) {
-        while (container.hasChildNodes())
-            container.removeChild(container.firstChild);
-        this.width = Math.floor(container.offsetWidth / pixelSize) + 1;
-        this.height = Math.floor(container.offsetHeight / pixelSize) + 1;
-        // create the canvas
-        var canvas = document.createElement("canvas");
+    Rasterizer.prototype.buildCanvas = function (canvas, pixelSize) {
+        this.width = Math.floor(canvas.offsetWidth / pixelSize) + 1;
+        this.height = Math.floor(canvas.offsetHeight / pixelSize) + 1;
         canvas.width = this.width;
         canvas.height = this.height;
-        canvas.style.left = "0px";
-        canvas.style.top = "0px";
-        canvas.style.width = "100%";
-        canvas.style.height = "100%";
-        container.appendChild(canvas);
         this.context = canvas.getContext("2d");
+        this.context.fillStyle = "white";
+        this.context.font = "16pt Arial";
         this.clear();
     };
     Rasterizer.prototype.init = function () {
@@ -355,9 +348,11 @@ var Rasterizer = (function () {
         this.heapView = new Uint8Array(heap, 0, this.imageData.data.length);
         this.framebuffer = new Framebuffer(window, null, heap);
     };
-    Rasterizer.prototype.flush = function () {
+    Rasterizer.prototype.flush = function (timeElapsed) {
         this.imageData.data.set(this.heapView);
         this.context.putImageData(this.imageData, 0, 0);
+        var fps = (1.0 / timeElapsed).toFixed(1);
+        this.context.fillText(fps + " fps", 10, 30);
     };
     Rasterizer.prototype.drawSpan = function (span, y) {
         if (y < 0 || y >= this.height)
@@ -432,12 +427,15 @@ var Rasterizer = (function () {
         return new Vector4(cx + cx * v.x, cy - cy * v.y, v.z / Rasterizer.ZFAR, v.w);
     };
     Rasterizer.prototype.drawTriangle3D = function (color1, v1, color2, v2, color3, v3) {
-        v1 = this.projectVertex(new Vector4(v1.x, v1.y, v1.z, 1.0));
-        v2 = this.projectVertex(new Vector4(v2.x, v2.y, v2.z, 1.0));
-        v3 = this.projectVertex(new Vector4(v3.x, v3.y, v3.z, 1.0));
-        if (v1 == null || v2 == null || v3 == null)
+        v1 = new Vector4(v1.x, v1.y, v1.z, 1.0);
+        v2 = new Vector4(v2.x, v2.y, v2.z, 1.0);
+        v3 = new Vector4(v3.x, v3.y, v3.z, 1.0);
+        var pv1 = this.projectVertex(v1);
+        var pv2 = this.projectVertex(v2);
+        var pv3 = this.projectVertex(v3);
+        if (pv1 == null || pv2 == null || pv3 == null)
             return;
-        this.drawTriangle(color1, v1, color2, v2, color3, v3);
+        this.drawTriangle(color1, pv1, color2, pv2, color3, pv3);
     };
     Rasterizer.prototype.drawQuad3D = function (color1, v1, color2, v2, color3, v3, color4, v4) {
         this.drawTriangle3D(color1, v1, color2, v2, color3, v3);
@@ -485,7 +483,7 @@ var Box = (function () {
         var position = this.position;
         var size = this.size / 2;
         var color1 = this.color;
-        var color2 = color1.scale(0.75);
+        var color2 = color1.scale(0.5);
         color2.w = color1.w;
         // front
         var v1 = new Vector4(-size, size, size);
@@ -525,4 +523,95 @@ var Box = (function () {
         rast.drawQuad3D(color2, v1.add(position), color2, v2.add(position), color2, v3.add(position), color2, v4.add(position));
     };
     return Box;
+})();
+/*
+ * Copyright (C) 2011, 2014 Josh A. Beam
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *   1. Redistributions of source code must retain the above copyright
+ *      notice, this list of conditions and the following disclaimer.
+ *   2. Redistributions in binary form must reproduce the above copyright
+ *      notice, this list of conditions and the following disclaimer in the
+ *      documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+/// <reference path="Box.ts"/>
+/// <reference path="Rasterizer.ts"/>
+var Application = (function () {
+    function Application(time) {
+        this.modelview = new Matrix4();
+        this.x = 0.0;
+        this.z = -8.0;
+        this.rotation = 0.0;
+        this.boxes = [];
+        this.time = 0.0;
+        this.keyState = [];
+        this.firstCycle = true;
+        this.time = time;
+        this.canvas = document.getElementsByTagName("canvas")[0];
+        if (!this.canvas) {
+            window.alert("No canvas element found.");
+            return;
+        }
+        this.rast = new Rasterizer(this.canvas, 4);
+        this.boxes.push(new Box(new Vector4(-1, -1, -1), 1, new Vector4(255, 0, 0, 255)));
+        this.boxes.push(new Box(new Vector4(-1, -1, 1), 1, new Vector4(0, 255, 0, 255)));
+        this.boxes.push(new Box(new Vector4(-1, 1, -1), 1, new Vector4(0, 0, 255, 255)));
+        this.boxes.push(new Box(new Vector4(-1, 1, 1), 1, new Vector4(255, 255, 255, 255)));
+        this.boxes.push(new Box(new Vector4(1, -1, -1), 1, new Vector4(64, 64, 64, 255)));
+        this.boxes.push(new Box(new Vector4(1, -1, 1), 1, new Vector4(255, 255, 0, 255)));
+        this.boxes.push(new Box(new Vector4(1, 1, -1), 1, new Vector4(0, 255, 255, 255)));
+        this.boxes.push(new Box(new Vector4(1, 1, 1), 1, new Vector4(255, 0, 255, 255)));
+    }
+    Application.prototype.cycle = function (time) {
+        var timeElapsed = (time - this.time) / 1000.0;
+        this.time = time;
+        this.processKeyState(timeElapsed);
+        this.rotation += Math.PI * timeElapsed / 10.0;
+        var mr = Matrix4.rollRotation(this.rotation);
+        var my = Matrix4.yawRotation(-this.rotation * 1.5);
+        var mt = Matrix4.translation(new Vector4(this.x, 0, this.z));
+        this.modelview = mt.multiply(my.multiply(mr));
+        this.render(timeElapsed);
+    };
+    Application.prototype.processKeyState = function (timeElapsed) {
+        timeElapsed *= 5.0;
+        if (this.keyState[37])
+            this.rotation -= Math.PI * timeElapsed / 30.0;
+        if (this.keyState[38]) {
+            this.z += timeElapsed;
+        }
+        if (this.keyState[39])
+            this.rotation += Math.PI * timeElapsed / 30.0;
+        if (this.keyState[40]) {
+            this.z -= timeElapsed;
+        }
+    };
+    Application.prototype.keyDown = function (e) {
+        this.keyState[e.keyCode] = true;
+    };
+    Application.prototype.keyUp = function (e) {
+        this.keyState[e.keyCode] = false;
+    };
+    Application.prototype.render = function (timeElapsed) {
+        var _this = this;
+        this.rast.clear();
+        this.rast.setModelviewMatrix(this.modelview);
+        this.boxes.forEach(function (box) { return box.render(_this.rast); });
+        this.rast.flush(timeElapsed);
+    };
+    return Application;
 })();

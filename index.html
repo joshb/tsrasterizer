@@ -9,90 +9,28 @@
 </head>
 <body>
 
-<div id="framebuffer"></div>
-
-<h1>JavaScript</h1>
-
-<a href="JavaScript/Framebuffer.js">Framebuffer.js</a>
-
-<h1>TypeScript</h1>
-
-<a href="TypeScript/Box.ts">Box.ts</a>
-<a href="TypeScript/Edge.ts">Edge.ts</a>
-<a href="TypeScript/Matrix4.ts">Matrix4.ts</a>
-<a href="TypeScript/Rasterizer.ts">Rasterizer.ts</a>
-<a href="TypeScript/Span.ts">Span.ts</a>
-<a href="TypeScript/Vector4.ts">Vector4.ts</a>
-
-<h1>Settings</h1>
-
-<p>
-    pixel size:
-    <select id="pixelSize" onchange="createRasterizer()">
-        <option value="1">1x1</option>
-        <option value="2">2x2</option>
-        <option value="4">4x4</option>
-        <option value="8">8x8</option>
-        <option value="16" selected="selected">16x16</option>
-        <option value="32">32x32</option>
-        <option value="64">64x64</option>
-        <option value="128">128x128</option>
-    </select>
-</p>
-
-<p>
-    <input id="clearFramebufferCheckbox" type="checkbox" onchange="clearFramebufferChanged(this)" checked="checked" />
-    <label for="clearFramebufferCheckbox">clear framebuffer</label>
-</p>
+<canvas>Your browser doesn't support the HTML canvas element. Please upgrade!</canvas>
 
 <script>
-var rast = null;
-createRasterizer();
+var app = new Application(window.performance.now());
 
-var clearFramebuffer = true;
+setInterval(cycle, 12);
+document.onkeydown = onkeydown;
+document.onkeyup = onkeyup;
 
-var boxes = new Array();
-boxes.push(new Box(new Vector4(-1, -1, -1), 1, new Vector4(255, 0, 0, 255)));
-boxes.push(new Box(new Vector4(-1, -1, 1), 1, new Vector4(0, 255, 0, 255)));
-boxes.push(new Box(new Vector4(-1, 1, -1), 1, new Vector4(0, 0, 255, 255)));
-boxes.push(new Box(new Vector4(-1, 1, 1), 1, new Vector4(255, 255, 255, 255)));
-boxes.push(new Box(new Vector4(1, -1, -1), 1, new Vector4(64, 64, 64, 255)));
-boxes.push(new Box(new Vector4(1, -1, 1), 1, new Vector4(255, 255, 0, 255)));
-boxes.push(new Box(new Vector4(1, 1, -1), 1, new Vector4(0, 255, 255, 255)));
-boxes.push(new Box(new Vector4(1, 1, 1), 1, new Vector4(255, 0, 255, 255)));
-
-var r = 0.0;
-function render()
+function cycle()
 {
-    if(clearFramebuffer)
-        rast.clear();
-
-    r += (Math.PI / 180.0) * 2;
-    var mr = Matrix4.rollRotation(r);
-    var my = Matrix4.yawRotation(-r * 1.5);
-    var mt = Matrix4.translation(new Vector4(0, 0, -6));
-    rast.setModelviewMatrix(mt.multiply(my.multiply(mr)));
-
-    for(var i = 0; i < boxes.length; ++i)
-        boxes[i].render(rast);
-
-    rast.flush();
+    app.cycle(window.performance.now());
 }
 
-setInterval(render, 50);
-
-function createRasterizer()
+function onkeydown(e)
 {
-    var framebuffer = document.getElementById("framebuffer");
-    var pixelSize = document.getElementById("pixelSize");
-
-    var selectedPixelSize = parseInt(pixelSize.options[pixelSize.selectedIndex].value);
-    rast = new Rasterizer(framebuffer, selectedPixelSize);
+    app.keyDown(e);
 }
 
-function clearFramebufferChanged(clearFramebufferCheckbox)
+function onkeyup(e)
 {
-    clearFramebuffer = clearFramebufferCheckbox.checked;
+    app.keyUp(e);
 }
 </script>
 
