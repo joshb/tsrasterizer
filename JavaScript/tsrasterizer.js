@@ -611,7 +611,7 @@ var Application = (function () {
         this.rast.flush(timeElapsed);
         if (this.fps) {
             var numFramesPerSecond = 1.0 / timeElapsed;
-            this.fps.innerText = numFramesPerSecond.toFixed(1) + " fps";
+            this.fps.textContent = numFramesPerSecond.toFixed(1) + " fps";
         }
     };
     return Application;
