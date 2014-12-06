@@ -70,8 +70,6 @@ class Rasterizer
         canvas.width = this.width;
         canvas.height = this.height;
         this.context = canvas.getContext("2d");
-        this.context.fillStyle = "white";
-        this.context.font = "16pt Arial";
         this.clear();
     }
 
@@ -100,9 +98,6 @@ class Rasterizer
     {
         this.imageData.data.set(this.heapView);
         this.context.putImageData(this.imageData, 0, 0);
-
-        var fps = (1.0 / timeElapsed).toFixed(1);
-        this.context.fillText(fps + " fps", 10, 30);
     }
 
     public drawSpan(span:Span, y:number):void

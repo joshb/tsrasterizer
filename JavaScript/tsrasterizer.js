@@ -329,8 +329,6 @@ var Rasterizer = (function () {
         canvas.width = this.width;
         canvas.height = this.height;
         this.context = canvas.getContext("2d");
-        this.context.fillStyle = "white";
-        this.context.font = "16pt Arial";
         this.clear();
     };
     Rasterizer.prototype.init = function () {
@@ -351,8 +349,6 @@ var Rasterizer = (function () {
     Rasterizer.prototype.flush = function (timeElapsed) {
         this.imageData.data.set(this.heapView);
         this.context.putImageData(this.imageData, 0, 0);
-        var fps = (1.0 / timeElapsed).toFixed(1);
-        this.context.fillText(fps + " fps", 10, 30);
     };
     Rasterizer.prototype.drawSpan = function (span, y) {
         if (y < 0 || y >= this.height)
@@ -566,6 +562,7 @@ var Application = (function () {
             window.alert("No canvas element found.");
             return;
         }
+        this.fps = document.getElementById("fps");
         this.rast = new Rasterizer(this.canvas, 4);
         this.boxes.push(new Box(new Vector4(-1, -1, -1), 1, new Vector4(255, 0, 0, 255)));
         this.boxes.push(new Box(new Vector4(-1, -1, 1), 1, new Vector4(0, 255, 0, 255)));
@@ -612,6 +609,10 @@ var Application = (function () {
         this.rast.setModelviewMatrix(this.modelview);
         this.boxes.forEach(function (box) { return box.render(_this.rast); });
         this.rast.flush(timeElapsed);
+        if (this.fps) {
+            var numFramesPerSecond = 1.0 / timeElapsed;
+            this.fps.innerText = numFramesPerSecond.toFixed(1) + " fps";
+        }
     };
     return Application;
 })();

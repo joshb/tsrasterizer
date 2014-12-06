@@ -29,6 +29,7 @@
 class Application
 {
     private canvas;
+    private fps;
     private rast;
 
     private modelview:Matrix4 = new Matrix4();
@@ -50,6 +51,8 @@ class Application
             window.alert("No canvas element found.");
             return;
         }
+
+        this.fps = document.getElementById("fps");
 
         this.rast = new Rasterizer(this.canvas, 4);
 
@@ -116,5 +119,10 @@ class Application
         this.boxes.forEach(box => box.render(this.rast));
 
         this.rast.flush(timeElapsed);
+
+        if(this.fps) {
+            var numFramesPerSecond = 1.0 / timeElapsed;
+            this.fps.innerText = numFramesPerSecond.toFixed(1) + " fps";
+        }
     }
 }
